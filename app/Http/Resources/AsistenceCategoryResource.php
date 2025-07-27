@@ -7,4 +7,9 @@ namespace App\Http\Resources;
  */
 class AsistenceCategoryResource extends BaseJsonResource
 {
+    // public function toArray($request)
+    // {
+    //     return $this->resource->asJsonResourceWithRelationships();
+    // }
+
 }

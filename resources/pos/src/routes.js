@@ -129,6 +129,10 @@ import Assistances from "./components/assistances/Assistances";
 import CreateAssistance from "./components/assistances/CreateAssistances";
 import EditAssistance from "./components/assistances/EditAssistances";
 import AssistancesDetail from "./components/assistances/AssistancesDetail";
+import AssistanceCategories from "./components/assistancesCategory/AssistanceCategories";
+//import CreateAssistance from "./components/assistances/CreateAssistances";
+//import EditAssistance from "./components/assistances/EditAssistances";
+// import AssistancesDetail from "./components/assistances/AssistancesDetail";
 
 
 export const route = [
@@ -665,9 +669,15 @@ export const route = [
     },
     {
         path: "assistances/:id",
-        ele: <AssistancesDetail  />,
+        ele: <AssistancesDetail />,
         permission: Permissions.MANAGE_ASISTENCES,
     },
+    {
+        path: "assistances-category",
+        ele: <AssistanceCategories />,
+        permission: Permissions.MANAGE_ASISTENCES,
+    }
+
 ];
 
 export const adminRoute = [

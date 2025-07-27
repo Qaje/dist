@@ -19,11 +19,51 @@ class AsistenceCategoryRepository extends BaseRepository
 {
     protected $fieldSearchable = [
         'name',
+        'description',
+        'is_active'
     ];
+
+    protected $allowedFields =[
+        'name',
+        'description',
+        'is_active'
+    ];
+
+    public function getFieldsSearchable():array
+    {
+        return $this->fieldSearchable;
+    }
 
     public function model(): string
     {
         return AsistenceCategory::class;
     }
+
+    public function storeAsistenceCategory($input)
+    {
+        try{
+            DB::beginTransaction();
+            $service = $this->create($input);
+            DB::commit();
+            return $service;
+        }catch (eXception $e){
+            DB:rollBack();
+            throw new UnprocessableEntityHttpException($e->getMessage());
+
+        }
+    }
+
+    public function updateAsistenceCategory($input, $id){
+        try {
+            DB::beginTransaction();
+            $service = $this->update($input, $id);
+            DB::commit();
+            return $service;
+        }catch (Exception $e){
+            DB::rollBack();
+            throw new UnprocessableEntityHttpException($e->getMessage());
+        }
+    }
+
 
 }

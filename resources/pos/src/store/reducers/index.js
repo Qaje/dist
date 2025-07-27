@@ -117,6 +117,7 @@ import frontCmsReducer from "./frontCmsReducer";
 import { cartReducer } from "./cartReducer";
 import dualScreenReducer from "./dualScreenReducer";
 import assistanceReducer from "./assistanceReducer";
+import posAllAssistanceReducer from "./pos/posAllAssistanceReducer";
 
 export default combineReducers({
     loginUser: loginReducers,
@@ -236,5 +237,6 @@ export default combineReducers({
     frontCms: frontCmsReducer,
     cart: cartReducer,
     dualScreenSetting: dualScreenReducer,
-    asistances:assistanceReducer
+    asistances:assistanceReducer,
+    posAllAssistances: posAllAssistanceReducer
 });

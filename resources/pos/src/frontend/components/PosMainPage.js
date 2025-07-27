@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Col, Container, Row, Table } from "react-bootstrap-v5";
+import { Col, Container, Row, Table, Nav } from "react-bootstrap-v5";
 import { connect, useDispatch, useSelector } from "react-redux";
 import moment from "moment";
 import { useReactToPrint } from "react-to-print";
 import Category from "./Category";
 import Brands from "./Brand";
 import Product from "./product/Product";
+import Assistance from "./assistance/Assistance"; // Nuevo componente
+import AssistanceCategory from "./assistance/AssistanceCategory"; // Nuevo componente
 import ProductCartList from "./cart-product/ProductCartList";
 import {
     posSearchNameProduct,
     posSearchCodeProduct,
 } from "../../store/action/pos/posfetchProductAction";
+import {
+    fetchAssistanceClickable,posAllAssistance
+} from "../../store/action/pos/posAllAssistanceAction"; // Nueva acción
 import ProductSearchbar from "./product/ProductSearchbar";
+import AssistanceSearchbar from "./assistance/AssistanceSearchbar"; // Nuevo componente
 import { prepareCartArray } from "../shared/PrepareCartArray";
+import { prepareMixedCartArray } from "../shared/PrepareCartAssistanceArray"; // Nueva función
 import ProductDetailsModel from "../shared/ProductDetailsModel";
 import CartItemMainCalculation from "./cart-product/CartItemMainCalculation";
 import PosHeader from "./header/PosHeader";
@@ -41,7 +48,7 @@ import {
     getFormattedMessage,
     getFormattedOptions,
 } from "../../shared/sharedMethod";
-import { discountType, paymentMethodOptions, productActionType, toastType } from "../../constants";
+import { discountType, paymentMethodOptions, productActionType, assistanceActionType,asistancesActionType, toastType } from "../../constants";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
 import CustomerForm from "./customerModel/CustomerForm";
 import HoldListModal from "./holdListModal/HoldListModal";
@@ -57,6 +64,7 @@ const PosMainPage = (props) => {
     const {
         onClickFullScreen,
         posAllProducts,
+        posAllAssistances, // Nueva prop
         customCart,
         posCashPaymentAction,
         frontSetting,
@@ -66,20 +74,22 @@ const PosMainPage = (props) => {
         paymentDetails,
         allConfigData,
         fetchBrandClickable,
+        fetchAssistanceClickable, // Nueva prop
         posAllTodaySaleOverAllReport,
         fetchHoldLists,
         holdListData,
         taxes
     } = props;
+
     const componentRef = useRef();
     const registerDetailsRef = useRef();
     const [openCalculator, setOpenCalculator] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [updateProducts, setUpdateProducts] = useState([]);
-    const [isOpenCartItemUpdateModel, setIsOpenCartItemUpdateModel] =
-        useState(false);
+    const [isOpenCartItemUpdateModel, setIsOpenCartItemUpdateModel] = useState(false);
     const [product, setProduct] = useState(null);
     const [cartProductIds, setCartProductIds] = useState([]);
+    const [cartAssistanceIds, setCartAssistanceIds] = useState([]); // Nuevo estado
     const [newCost, setNewCost] = useState("");
     const [paymentPrint, setPaymentPrint] = useState({});
     const [cashPayment, setCashPayment] = useState(false);
@@ -88,18 +98,22 @@ const PosMainPage = (props) => {
     const [productMsg, setProductMsg] = useState(0);
     const [brandId, setBrandId] = useState();
     const [categoryId, setCategoryId] = useState();
+    const [assistanceCategoryId, setAssistanceCategoryId] = useState(); // Nuevo estado
     const [selectedCustomerOption, setSelectedCustomerOption] = useState(null);
     const [selectedOption, setSelectedOption] = useState(null);
     const [updateHolList, setUpdateHoldList] = useState(false);
     const [hold_ref_no, setHold_ref_no] = useState("");
-     const [page, setPage] = useState(1);
+    const [page, setPage] = useState(1);
+    const [activeTab, setActiveTab] = useState('products'); // Nuevo estado para tabs
+
     const [cartItemValue, setCartItemValue] = useState({
-        discount_type: discountType.FIXED,    // 0 = fixed, 1 = percentage
+        discount_type: discountType.FIXED,
         discount_value: 0,
         discount: 0,
         tax: 0,
         shipping: 0,
     });
+
     const [cashPaymentValue, setCashPaymentValue] = useState({
         notes: "",
         payment_status: {
@@ -107,53 +121,44 @@ const PosMainPage = (props) => {
             value: 1,
         },
     });
+
     const [errors, setErrors] = useState({ notes: "" });
     const [changeReturn, setChangeReturn] = useState(0);
     const [showCloseDetailsModal, setShowCloseDetailsModal] = useState(false);
-    const [showPosRegisterModel, setShowPosRegisterModel] = useState(false)
+    const [showPosRegisterModel, setShowPosRegisterModel] = useState(false);
+
     const { closeRegisterDetails } = useSelector((state) => state);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    //total Qty on cart item
-    const localCart = updateProducts.map((updateQty) =>
-        Number(updateQty.quantity)
-    );
-    const totalQty =
-     localCart.length > 0 && Number(localCart?.reduce((cart, current) => cart + current, 0)).toFixed(2);
+    // Cálculos del carrito (modificados para soportar productos y asistencias)
+    const localCart = updateProducts.map((updateQty) => Number(updateQty.quantity));
+    const totalQty = localCart.length > 0 && Number(localCart?.reduce((cart, current) => cart + current, 0)).toFixed(2);
 
-    //subtotal on cart item
-    const localTotal = updateProducts.map(
-        (updateQty) =>
-            calculateProductCost(updateQty).toFixed(2) * updateQty.quantity
-    );
-    const subTotal =
-        localTotal.length > 0 &&
-        localTotal?.reduce((cart, current) => {
-            return cart + current;
-        });
+    const localTotal = updateProducts.map((item) => {
+        if (item.item_type === 'assistance') {
+            return item.attributes?.price * item.quantity || item.price * item.quantity;
+        } else {
+            return calculateProductCost(item).toFixed(2) * item.quantity;
+        }
+    });
+
+    const subTotal = localTotal.length > 0 && localTotal?.reduce((cart, current) => cart + current, 0);
 
     const [holdListId, setHoldListValue] = useState({
         referenceNumber: "",
     });
 
-    //grand total on cart item
-        const discountTotal = subTotal - cartItemValue.discount;
+    const discountTotal = subTotal - cartItemValue.discount;
     const taxTotal = (discountTotal * cartItemValue.tax) / 100;
     const mainTotal = discountTotal + taxTotal;
-    const grandTotal = (
-        Number(mainTotal) + Number(cartItemValue.shipping)
-    ).toFixed(2);
+    const grandTotal = (Number(mainTotal) + Number(cartItemValue.shipping)).toFixed(2);
 
     useEffect(() => {
         setPaymentPrint({
             ...paymentPrint,
-            barcode_url:
-                paymentDetails.attributes &&
-                paymentDetails.attributes.barcode_url,
-            reference_code:
-                paymentDetails.attributes &&
-                paymentDetails.attributes.reference_code,
+            barcode_url: paymentDetails.attributes && paymentDetails.attributes.barcode_url,
+            reference_code: paymentDetails.attributes && paymentDetails.attributes.reference_code,
         });
     }, [paymentDetails]);
 
@@ -181,9 +186,9 @@ const PosMainPage = (props) => {
 
     useEffect(() => {
         if(allConfigData){
-            setShowPosRegisterModel(allConfigData?.open_register)
+            setShowPosRegisterModel(allConfigData?.open_register);
         }
-    },[allConfigData])
+    },[allConfigData]);
 
     useEffect(() => {
         if (updateHolList === true) {
@@ -199,12 +204,8 @@ const PosMainPage = (props) => {
     const handleValidation = () => {
         let errors = {};
         let isValid = false;
-        if (
-            cashPaymentValue["notes"] &&
-            cashPaymentValue["notes"].length > 100
-        ) {
-            errors["notes"] =
-                "The notes must not be greater than 100 characters";
+        if (cashPaymentValue["notes"] && cashPaymentValue["notes"].length > 100) {
+            errors["notes"] = "The notes must not be greater than 100 characters";
         } else {
             isValid = true;
         }
@@ -212,26 +213,41 @@ const PosMainPage = (props) => {
         return isValid;
     };
 
-    //filter on category id
+    // Filtros de categoría para productos
     const setCategory = (item) => {
         setCategoryId(item);
     };
 
+    // Filtros de categoría para asistencias
+    const setAssistanceCategory = (item) => {
+        setAssistanceCategoryId(item);
+    };
+
     useEffect(() => {
         if (selectedOption) {
-            dispatch({
-                type:productActionType.RESET_PRODUCT
-            })
-            setPage(1);
-            fetchBrandClickable(
-                brandId,
-                categoryId,
-                selectedOption.value && selectedOption.value
-            );
+            if (activeTab === 'products') {
+                dispatch({ type: productActionType.RESET_PRODUCT });
+                setPage(1);
+                fetchBrandClickable(brandId, categoryId, selectedOption.value && selectedOption.value, 1, "", true);
+            } else if (activeTab === 'assistances') {
+                // Corregir el tipo de acción
+                dispatch({ type: asistancesActionType.RESET_ASSISTANCE });
+                setPage(1);
+                // Llamar con resetPage=true para limpiar la lista
+                fetchAssistanceClickable(assistanceCategoryId, selectedOption.value && selectedOption.value, 1, "", true);
+            }
         }
-    }, [selectedOption, brandId, categoryId]);
+    }, [selectedOption, brandId, categoryId, assistanceCategoryId, activeTab]);
 
-    //filter on brand id
+    useEffect(() => {
+        if (activeTab === 'assistances' && selectedOption) {
+            // Cargar todas las asistencias para el dropdown/lista completa
+            dispatch(posAllAssistance({
+                warehouse_id: selectedOption.value
+            }));
+        }
+    }, [activeTab, selectedOption]);
+
     const setBrand = (item) => {
         setBrandId(item);
     };
@@ -252,7 +268,6 @@ const PosMainPage = (props) => {
         setChangeReturn(change);
     };
 
-    // payment type dropdown functionality
     const paymentTypeFilterOptions = getFormattedOptions(paymentMethodOptions);
     const paymentTypeDefaultValue = paymentTypeFilterOptions.map((option) => {
         return {
@@ -260,6 +275,7 @@ const PosMainPage = (props) => {
             label: option.name,
         };
     });
+
     const [paymentValue, setPaymentValue] = useState({
         payment_type: paymentTypeDefaultValue[0],
     });
@@ -283,16 +299,13 @@ const PosMainPage = (props) => {
 
     const onChangeCart = (event) => {
         if(updateProducts.length == 0){
-            dispatch(addToast({text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR}))
+            dispatch(addToast({text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR}));
             return;
         }
         const { value } = event.target;
-        // check if value includes a decimal point
         if (value.match(/\./g)) {
             const [, decimal] = value.split(".");
-            // restrict value to only 2 decimal places
             if (decimal?.length > 2) {
-                // do nothing
                 return;
             }
         }
@@ -322,19 +335,16 @@ const PosMainPage = (props) => {
 
     const onChangeTaxCart = (event) => {
         if(updateProducts.length == 0){
-            dispatch(addToast({text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR}))
+            dispatch(addToast({text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR}));
             return;
         }
         const min = 0;
         const max = 100;
         const { value } = event.target;
         const values = Math.max(min, Math.min(max, Number(value)));
-        // check if value includes a decimal point
         if (value.match(/\./g)) {
             const [, decimal] = value.split(".");
-            // restrict value to only 2 decimal places
             if (decimal?.length > 2) {
-                // do nothing
                 return;
             }
         }
@@ -344,7 +354,6 @@ const PosMainPage = (props) => {
         }));
     };
 
-    //payment slip model onchange
     const handleCashPayment = () => {
         setCashPaymentValue({
             notes: "",
@@ -360,12 +369,10 @@ const PosMainPage = (props) => {
         setNewCost(item);
     };
 
-    //product details model onChange
     const openProductDetailModal = () => {
         setIsOpenCartItemUpdateModel(!isOpenCartItemUpdateModel);
     };
 
-    //product details model updated value
     const onClickUpdateItemInCart = (item) => {
         setProduct(item);
         setIsOpenCartItemUpdateModel(true);
@@ -376,7 +383,6 @@ const PosMainPage = (props) => {
         updateCart(localCart);
     };
 
-    //updated Qty function
     const updatedQty = (qty) => {
         setQuantity(qty);
     };
@@ -385,43 +391,70 @@ const PosMainPage = (props) => {
         setUpdateProducts(cartProducts);
     };
 
-    //cart item delete
-    const onDeleteCartItem = (productId) => {
-        const existingCart = updateProducts.filter((e) => e.id !== productId);
+    const onDeleteCartItem = (itemId, itemType = 'product') => {
+        const existingCart = updateProducts.filter((e) => !(e.id === itemId && (e.item_type === itemType || (!e.item_type && itemType === 'product'))));
         updateCart(existingCart);
     };
 
-    //product add to cart function
     const addToCarts = (items) => {
         updateCart(items);
     };
 
     const onScrollCallAPI = (page) => {
-        fetchBrandClickable(
-            brandId,
-            categoryId,
-            selectedOption.value && selectedOption.value,
-            page
-        );
+        if (activeTab === 'products') {
+            fetchBrandClickable(brandId, categoryId, selectedOption.value && selectedOption.value, page);
+        } else if (activeTab === 'assistances') {
+            // Pasar todos los parámetros necesarios
+            fetchAssistanceClickable(
+                assistanceCategoryId,
+                selectedOption.value && selectedOption.value,
+                page,
+                "", // search string vacío
+                false // resetPage = false para paginación
+            );
+        }
     };
 
+
     const onSearchProduct = (search) => {
-        fetchBrandClickable(
-            brandId,
-            categoryId,
+        fetchBrandClickable(brandId, categoryId, selectedOption.value && selectedOption.value, 1, search, true);
+    };
+
+    // const onSearchAssistance = (search) => {
+    //     fetchAssistanceClickable(assistanceCategoryId, selectedOption.value && selectedOption.value, 1, search, true);
+    // };
+    const onSearchAssistance = (search) => {
+        dispatch({ type: asistancesActionType.RESET_ASSISTANCE });
+        setPage(1);
+        fetchAssistanceClickable(
+            assistanceCategoryId,
             selectedOption.value && selectedOption.value,
             1,
             search,
-            true
+            true // resetPage = true para nueva búsqueda
         );
     };
 
-    // create customer model
+    const handleTabChange = (tab) => {
+        if (tab !== activeTab) {
+            setActiveTab(tab);
+            setPage(1);
+
+            if (tab === 'products') {
+                // Limpiar filtros de asistencias
+                setAssistanceCategoryId(null);
+            } else if (tab === 'assistances') {
+                // Limpiar filtros de productos
+                setBrandId(null);
+                setCategoryId(null);
+            }
+        }
+    };
+
     const customerModel = (val) => {
         setModalShowCustomer(val);
     };
 
-    //prepare data for print Model
     const preparePrintData = () => {
         const formValue = {
             products: updateProducts,
@@ -442,23 +475,20 @@ const PosMainPage = (props) => {
         return formValue;
     };
 
-    //prepare data for payment api
     const prepareData = (updateProducts) => {
         const formValue = {
             date: moment(new Date()).format("YYYY-MM-DD"),
-            customer_id:
-                selectedCustomerOption && selectedCustomerOption[0]
-                    ? selectedCustomerOption[0].value
-                    : selectedCustomerOption && selectedCustomerOption.value,
-            warehouse_id:
-                selectedOption && selectedOption[0]
-                    ? selectedOption[0].value
-                    : selectedOption && selectedOption.value,
+            customer_id: selectedCustomerOption && selectedCustomerOption[0]
+                ? selectedCustomerOption[0].value
+                : selectedCustomerOption && selectedCustomerOption.value,
+            warehouse_id: selectedOption && selectedOption[0]
+                ? selectedOption[0].value
+                : selectedOption && selectedOption.value,
             sale_items: updateProducts,
-            grand_total: grandTotal, 
+            grand_total: grandTotal,
             ...(cashPaymentValue?.payment_status?.value === 1
                 ? { payment_type: paymentValue?.payment_type?.value }
-                : {}),            
+                : {}),
             discount: cartItemValue.discount,
             shipping: cartItemValue.shipping,
             tax_rate: cartItemValue.tax,
@@ -470,8 +500,7 @@ const PosMainPage = (props) => {
         return formValue;
     };
 
-    //cash payment method
-    const onCashPayment = (event,printSlip=false) => {
+    const onCashPayment = (event, printSlip = false) => {
         event.preventDefault();
         const valid = handleValidation();
         if (valid) {
@@ -482,6 +511,7 @@ const PosMainPage = (props) => {
                 {
                     brandId,
                     categoryId,
+                    assistanceCategoryId,
                     selectedOption,
                 },
                 printSlip
@@ -498,14 +528,13 @@ const PosMainPage = (props) => {
             setCashPaymentValue({
                 notes: "",
                 payment_status: {
-                    label: getFormattedMessage(
-                        "globally.detail.paid"
-                    ),
+                    label: getFormattedMessage("globally.detail.paid"),
                     value: 1,
                 },
             });
             dispatch(fetchTax());
             setCartProductIds("");
+            setCartAssistanceIds(""); // Limpiar IDs de assistances
         }
     };
 
@@ -525,7 +554,6 @@ const PosMainPage = (props) => {
         content: () => registerDetailsRef.current,
     });
 
-    //payment print
     const loadPrintBlock = () => {
         return (
             <div className="d-none">
@@ -546,14 +574,10 @@ const PosMainPage = (props) => {
         );
     };
 
-    //Register details  slip
     const loadRegisterDetailsPrint = () => {
         return (
             <div className="d-none">
-                <button
-                    id="printRegisterDetailsId"
-                    onClick={handleRegisterDetailsPrint}
-                >
+                <button id="printRegisterDetailsId" onClick={handleRegisterDetailsPrint}>
                     Print this out!
                 </button>
                 <PrintRegisterDetailsData
@@ -568,7 +592,6 @@ const PosMainPage = (props) => {
         );
     };
 
-    //payment slip
     const loadPaymentSlip = () => {
         return (
             <div className="d-none">
@@ -590,6 +613,7 @@ const PosMainPage = (props) => {
             </div>
         );
     };
+
     const [lgShow, setLgShow] = useState(false);
     const [holdShow, setHoldShow] = useState(false);
 
@@ -610,9 +634,7 @@ const PosMainPage = (props) => {
         if (data.cash_in_hand_while_closing.toString().trim()?.length === 0) {
             dispatch(
                 addToast({
-                    text: getFormattedMessage(
-                        "pos.cclose-register.enter-total-cash.message"
-                    ),
+                    text: getFormattedMessage("pos.cclose-register.enter-total-cash.message"),
                     type: toastType.ERROR,
                 })
             );
@@ -620,6 +642,16 @@ const PosMainPage = (props) => {
             setShowCloseDetailsModal(false);
             dispatch(closeRegisterAction(data, navigate));
         }
+    };
+
+    const debugAssistanceCall = () => {
+        console.log('Debug - Assistance Call Parameters:', {
+            assistanceCategoryId,
+            warehouseId: selectedOption?.value,
+            page,
+            activeTab,
+            selectedOption
+        });
     };
 
     return (
@@ -644,85 +676,43 @@ const PosMainPage = (props) => {
                             <div className="main-table overflow-auto">
                                 <Table className="mb-0">
                                     <thead className="position-sticky top-0">
-                                        <tr>
-                                            <th>
-                                                {getFormattedMessage(
-                                                    "product.title"
-                                                )}
-                                            </th>
-                                            <th
-                                                className={
-                                                    updateProducts &&
-                                                        updateProducts.length
-                                                        ? "text-center"
-                                                        : ""
-                                                }
-                                            >
-                                                {getFormattedMessage(
-                                                    "pos-qty.title"
-                                                )}
-                                            </th>
-                                            <th>
-                                                {getFormattedMessage(
-                                                    "price.title"
-                                                )}
-                                            </th>
-                                            <th colSpan="2">
-                                                {getFormattedMessage(
-                                                    "pos.subtotal.small.title"
-                                                )}
-                                            </th>
-                                        </tr>
+                                    <tr>
+                                        <th>{getFormattedMessage("product.title")}</th>
+                                        <th className={updateProducts && updateProducts.length ? "text-center" : ""}>
+                                            {getFormattedMessage("pos-qty.title")}
+                                        </th>
+                                        <th>{getFormattedMessage("price.title")}</th>
+                                        <th colSpan="2">{getFormattedMessage("pos.subtotal.small.title")}</th>
+                                    </tr>
                                     </thead>
                                     <tbody className="border-0">
-                                        {updateProducts && updateProducts.length ? (
-                                            updateProducts.map(
-                                                (updateProduct, index) => {
-                                                    return (
-                                                        <ProductCartList
-                                                            singleProduct={
-                                                                updateProduct
-                                                            }
-                                                            key={index + 1}
-                                                            index={index}
-                                                            posAllProducts={
-                                                                posAllProducts
-                                                            }
-                                                            onClickUpdateItemInCart={
-                                                                onClickUpdateItemInCart
-                                                            }
-                                                            updatedQty={updatedQty}
-                                                            updateCost={updateCost}
-                                                            onDeleteCartItem={
-                                                                onDeleteCartItem
-                                                            }
-                                                            quantity={quantity}
-                                                            frontSetting={
-                                                                frontSetting
-                                                            }
-                                                            newCost={newCost}
-                                                            allConfigData={
-                                                                allConfigData
-                                                            }
-                                                            setUpdateProducts={
-                                                                setUpdateProducts
-                                                            }
-                                                        />
-                                                    );
-                                                }
-                                            )
-                                        ) : (
-                                            <tr>
-                                                <td
-                                                    colSpan={4}
-                                                    className="custom-text-center text-gray-900 fw-bold py-5"
-                                                >
-                                                    {getFormattedMessage(
-                                                        "sale.product.table.no-data.label"
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        )}
+                                    {updateProducts && updateProducts.length ? (
+                                        updateProducts.map((updateProduct, index) => {
+                                            return (
+                                                <ProductCartList
+                                                    singleProduct={updateProduct}
+                                                    key={`${updateProduct.item_type || 'product'}-${updateProduct.id}-${index}`}
+                                                    index={index}
+                                                    posAllProducts={posAllProducts}
+                                                    onClickUpdateItemInCart={onClickUpdateItemInCart}
+                                                    updatedQty={updatedQty}
+                                                    updateCost={updateCost}
+                                                    onDeleteCartItem={onDeleteCartItem}
+                                                    quantity={quantity}
+                                                    frontSetting={frontSetting}
+                                                    newCost={newCost}
+                                                    allConfigData={allConfigData}
+                                                    setUpdateProducts={setUpdateProducts}
+                                                />
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={4} className="custom-text-center text-gray-900 fw-bold py-5">
+                                                {getFormattedMessage("sale.product.table.no-data.label")}
+                                            </td>
+                                        </tr>
+                                    )}
                                     </tbody>
                                 </Table>
                             </div>
@@ -760,14 +750,25 @@ const PosMainPage = (props) => {
                 <Col lg={7} xxl={8} xs={6} className="ps-lg-0 pos-right-scs">
                     <div className="right-content mb-3 d-flex flex-column h-100">
                         <div className="d-sm-flex align-items-center flex-xxl-nowrap flex-wrap">
-                            <ProductSearchbar
-                                customCart={customCart}
-                                setUpdateProducts={setUpdateProducts}
-                                updateProducts={updateProducts}
-                                selectedOption={selectedOption}
-                                onSearchProduct={onSearchProduct}
-                                settings={settings}
-                            />
+                            {activeTab === 'products' ? (
+                                <ProductSearchbar
+                                    customCart={customCart}
+                                    setUpdateProducts={setUpdateProducts}
+                                    updateProducts={updateProducts}
+                                    selectedOption={selectedOption}
+                                    onSearchProduct={onSearchProduct}
+                                    settings={settings}
+                                />
+                            ) : (
+                                <AssistanceSearchbar
+                                    customCart={customCart}
+                                    setUpdateProducts={setUpdateProducts}
+                                    updateProducts={updateProducts}
+                                    selectedOption={selectedOption}
+                                    onSearchAssistance={onSearchAssistance}
+                                    settings={settings}
+                                />
+                            )}
                             <HeaderAllButton
                                 holdListData={holdListData}
                                 goToHoldScreen={onClickHoldModel}
@@ -775,41 +776,87 @@ const PosMainPage = (props) => {
                                 onClickFullScreen={onClickFullScreen}
                                 opneCalculator={openCalculator}
                                 setOpneCalculator={setOpenCalculator}
-                                handleClickCloseRegister={
-                                    handleClickCloseRegister
-                                }
+                                handleClickCloseRegister={handleClickCloseRegister}
                             />
                         </div>
+
+                        {/* Tabs para alternar entre Productos y Asistencias */}
+                        <Nav variant="tabs" className="mb-3">
+                            <Nav.Item>
+                                <Nav.Link
+                                    active={activeTab === 'products'}
+                                    onClick={() => handleTabChange('products')}
+                                >
+                                    {getFormattedMessage("pos.products.tab.title" ,' ' )}
+                                </Nav.Link>
+                            </Nav.Item>
+                            <Nav.Item>
+                                <Nav.Link
+                                    active={activeTab === 'assistances'}
+                                    onClick={() => handleTabChange('assistances')}
+                                >
+                                    {getFormattedMessage("pos.assistances.tab.title" , ' ')}
+                                </Nav.Link>
+                            </Nav.Item>
+                        </Nav>
+
                         <div className="custom-card h-100 mb-3">
                             <div className="p-3">
-                                <Category
-                                    setCategory={setCategory}
-                                    brandId={brandId}
-                                    selectedOption={selectedOption}
-                                />
-                                <Brands
-                                    categoryId={categoryId}
-                                    setBrand={setBrand}
-                                    selectedOption={selectedOption}
-                                />
+                                {activeTab === 'products' ? (
+                                    <>
+                                        <Category
+                                            setCategory={setCategory}
+                                            brandId={brandId}
+                                            selectedOption={selectedOption}
+                                        />
+                                        <Brands
+                                            categoryId={categoryId}
+                                            setBrand={setBrand}
+                                            selectedOption={selectedOption}
+                                        />
+                                    </>
+                                ) : (
+                                    <AssistanceCategory
+                                        setAssistanceCategory={setAssistanceCategory}
+                                        selectedOption={selectedOption}
+                                    />
+                                )}
                             </div>
-                            <Product
-                                cartProducts={updateProducts}
-                                updateCart={addToCarts}
-                                customCart={customCart}
-                                setCartProductIds={setCartProductIds}
-                                cartProductIds={cartProductIds}
-                                settings={settings}
-                                productMsg={productMsg}
-                                selectedOption={selectedOption}
-                                onScrollCallAPI={onScrollCallAPI}
-                                page={page}
-                                setPage={setPage}
-                            />
+
+                            {activeTab === 'products' ? (
+                                <Product
+                                    cartProducts={updateProducts}
+                                    updateCart={addToCarts}
+                                    customCart={customCart}
+                                    setCartProductIds={setCartProductIds}
+                                    cartProductIds={cartProductIds}
+                                    settings={settings}
+                                    productMsg={productMsg}
+                                    selectedOption={selectedOption}
+                                    onScrollCallAPI={onScrollCallAPI}
+                                    page={page}
+                                    setPage={setPage}
+                                />
+                            ) : (
+                                <Assistance
+                                    cartProducts={updateProducts}
+                                    updateCart={addToCarts}
+                                    customCart={customCart}
+                                    setCartAssistanceIds={setCartAssistanceIds}
+                                    cartAssistanceIds={cartAssistanceIds}
+                                    settings={settings}
+                                    selectedOption={selectedOption}
+                                    onScrollCallAPI={onScrollCallAPI}
+                                    page={page}
+                                    setPage={setPage}
+                                />
+                            )}
                         </div>
                     </div>
                 </Col>
             </Row>
+
+            {/* Modales existentes */}
             {isOpenCartItemUpdateModel && (
                 <ProductDetailsModel
                     openProductDetailModal={openProductDetailModal}
@@ -882,7 +929,13 @@ const PosMainPage = (props) => {
                 handleCloseRegisterDetails={handleCloseRegisterDetails}
                 setShowCloseDetailsModal={setShowCloseDetailsModal}
             />
-            {allConfigData?.permissions?.length === 1 && <PosRegisterModel showPosRegisterModel={showPosRegisterModel} isCloseButton={false} onClickshowPosRegisterModel={() => setShowPosRegisterModel(false)} />}
+            {allConfigData?.permissions?.length === 1 && (
+                <PosRegisterModel
+                    showPosRegisterModel={showPosRegisterModel}
+                    isCloseButton={false}
+                    onClickshowPosRegisterModel={() => setShowPosRegisterModel(false)}
+                />
+            )}
         </Container>
     );
 };
@@ -890,6 +943,7 @@ const PosMainPage = (props) => {
 const mapStateToProps = (state) => {
     const {
         posAllProducts,
+        posAllAssistances, // Nueva prop del reducer
         frontSetting,
         settings,
         cashPayment,
@@ -901,6 +955,7 @@ const mapStateToProps = (state) => {
     return {
         holdListData,
         posAllProducts,
+        posAllAssistances, // Agregar assistances al estado
         frontSetting,
         settings,
         paymentDetails: cashPayment,
@@ -919,5 +974,6 @@ export default connect(mapStateToProps, {
     posSearchCodeProduct,
     posAllProduct,
     fetchBrandClickable,
+    fetchAssistanceClickable, // Nueva acción
     fetchHoldLists,
 })(PosMainPage);

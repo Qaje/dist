@@ -35,6 +35,12 @@ const WhyChooseUs = ({ totalRecord, isLoading }) => {
     }
   }, [whyChooseUsData]);
 
+    useEffect(() => {
+        if (activeTab === 'assistances') {
+            debugAssistanceCall();
+        }
+    }, [activeTab, assistanceCategoryId, selectedOption, page]);
+
   const onChange = (filter) => {
 
   };

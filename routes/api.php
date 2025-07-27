@@ -177,7 +177,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             // Route::resource('assistances', AsistenceAPIController::class);
             Route::resource('asistences', AsistenceAPIController::class);
             //Route::post('asistences/{asistence}', [AsistenceAPIController::class, 'update']);
-            Route::get('asistence-categories/{id}', [AsistenceCategoryController::class, 'show'])->name('asistence-categories.show');
+            Route::resource('asistence-categories',AsistenceCategoryController::class);
+            //Route::apiResource('asistence-categories.asistences', AsistenceAPIController::class);
+            //Route::get('asistence-categories/{id}', [AsistenceCategoryController::class, 'show'])->name('asistence-categories.show');
         });
 
 

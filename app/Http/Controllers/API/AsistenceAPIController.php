@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-
 use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\CreateAsistenceRequest;
 use App\Http\Requests\UpdateAsistenceRequest;
@@ -14,7 +13,6 @@ use Illuminate\Http\Request;
 use App\Http\Resources\AsistenceCollection;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
-// class AsistenceAPIController extends ResourceCollection//AppBaseController
 class AsistenceAPIController extends AppBaseController
 {
      private $asistenceRepository;
