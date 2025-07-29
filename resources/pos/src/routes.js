@@ -130,10 +130,9 @@ import CreateAssistance from "./components/assistances/CreateAssistances";
 import EditAssistance from "./components/assistances/EditAssistances";
 import AssistancesDetail from "./components/assistances/AssistancesDetail";
 import AssistanceCategories from "./components/assistancesCategory/AssistanceCategories";
-//import CreateAssistance from "./components/assistances/CreateAssistances";
-//import EditAssistance from "./components/assistances/EditAssistances";
-// import AssistancesDetail from "./components/assistances/AssistancesDetail";
-
+import CreateAssistanceCategory from "./components/assistancesCategory/CreateAssistanceCategories";
+import EditAssistanceCategory from "./components/assistancesCategory/EditAssistancesCategories";
+import AssistanceCategoryDetail from "./components/assistancesCategory/AssistanceCategoriesDetail";
 
 export const route = [
     {
@@ -676,8 +675,22 @@ export const route = [
         path: "assistances-category",
         ele: <AssistanceCategories />,
         permission: Permissions.MANAGE_ASISTENCES,
+    },
+    {
+        path: "assistances-category/create",
+        ele: <CreateAssistanceCategory />,
+        permission: Permissions.MANAGE_ASISTENCES,
+    },
+    {
+        path: "assistances-category/edit/:id",
+        ele: <EditAssistanceCategory />,
+        permission: Permissions.MANAGE_ASISTENCES,
+    },
+    {
+        path: "assistances-category/detail/:id",
+        ele: <AssistanceCategoryDetail />,
+        permission: Permissions.MANAGE_ASISTENCES,
     }
-
 ];
 
 export const adminRoute = [

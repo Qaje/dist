@@ -18,7 +18,6 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
     const onSubmit = async (data) => {
         setIsLoading(true);
         console.log('📤 Datos RAW del formulario:', data);
-
         try {
             // Verificar que tenemos el campo name
             if (!data.name || data.name.trim() === '') {
@@ -243,10 +242,10 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant="secondary" onClick={handleClose}>
-                            {getFormattedMessage('globally.button.close.label')}
+                            {getFormattedMessage('Cerrar')}
                         </Button>
                         <Button variant="primary" type="submit" disabled={isLoading}>
-                            {isLoading ? getFormattedMessage('globally.button.saving.label') : getFormattedMessage('globally.button.save.label')}
+                            {isLoading ? getFormattedMessage('Cargando...') : getFormattedMessage('Crear Servicio')}
                         </Button>
                     </Modal.Footer>
                 </Form>

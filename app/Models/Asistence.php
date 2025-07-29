@@ -4,21 +4,9 @@ namespace App\Models;
 
 use App\Models\Contracts\JsonResourceful;
 use App\Traits\HasJsonResourcefulData;
-use App\Traits\Multitenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
-//use App\Models\BaseModel;
-//use Illuminate\Database\Eloquent\Model;
-
-
 
 
 class Asistence extends BaseModel implements HasMedia,JsonResourceful
@@ -65,10 +53,10 @@ class Asistence extends BaseModel implements HasMedia,JsonResourceful
     //     return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
     // }
 
-    public function asistenceCategory()
-    {
-        return $this->belongsTo(\App\Models\AsistenceCategory::class, 'asistence_category_id');
-    }
+//    public function asistenceCategory()
+//    {
+//        return $this->belongsTo(\App\Models\AsistenceCategory::class, 'asistence_category_id');
+//    }
 
     public function prepareLinks(): array
     {

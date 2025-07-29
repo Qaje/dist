@@ -129,7 +129,6 @@ const AsideTopSubMenuItem = (props) => {
                             {config?.includes(Permissions.MANAGE_ASISTENCES) && (
                                 <Dropdown.Item className="py-0 fs-6">
                                     <Link
-                                        //to={"/user/assistances/create"}
                                         to={"/user/assistances/create"}
                                         className="nav-link px-4"
                                     >

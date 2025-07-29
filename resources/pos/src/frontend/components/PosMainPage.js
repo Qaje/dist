@@ -14,7 +14,7 @@ import {
     posSearchCodeProduct,
 } from "../../store/action/pos/posfetchProductAction";
 import {
-    fetchAssistanceClickable,posAllAssistance
+    fetchAssistanceClickable, posAllAssistance
 } from "../../store/action/pos/posAllAssistanceAction"; // Nueva acción
 import ProductSearchbar from "./product/ProductSearchbar";
 import AssistanceSearchbar from "./assistance/AssistanceSearchbar"; // Nuevo componente
@@ -48,7 +48,7 @@ import {
     getFormattedMessage,
     getFormattedOptions,
 } from "../../shared/sharedMethod";
-import { discountType, paymentMethodOptions, productActionType, assistanceActionType,asistancesActionType, toastType } from "../../constants";
+import { discountType, paymentMethodOptions, productActionType, assistanceActionType, asistancesActionType, toastType } from "../../constants";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
 import CustomerForm from "./customerModel/CustomerForm";
 import HoldListModal from "./holdListModal/HoldListModal";
@@ -185,10 +185,10 @@ const PosMainPage = (props) => {
     }, []);
 
     useEffect(() => {
-        if(allConfigData){
+        if (allConfigData) {
             setShowPosRegisterModel(allConfigData?.open_register);
         }
-    },[allConfigData]);
+    }, [allConfigData]);
 
     useEffect(() => {
         if (updateHolList === true) {
@@ -248,6 +248,16 @@ const PosMainPage = (props) => {
         }
     }, [activeTab, selectedOption]);
 
+    useEffect(() => {
+        if (activeTab === 'assistances-category' && selectedOption) {
+            // Cargar todas las asistencias para el dropdown/lista completa
+            dispatch(posAllAssistance({
+                warehouse_id: selectedOption.value
+            }));
+        }
+    }, [activeTab, selectedOption]);
+
+
     const setBrand = (item) => {
         setBrandId(item);
     };
@@ -298,8 +308,8 @@ const PosMainPage = (props) => {
     }, [updateProducts, selectedCustomerOption, selectedOption, cartItemValue, subTotal, grandTotal, cashPaymentValue, paymentValue]);
 
     const onChangeCart = (event) => {
-        if(updateProducts.length == 0){
-            dispatch(addToast({text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR}));
+        if (updateProducts.length == 0) {
+            dispatch(addToast({ text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR }));
             return;
         }
         const { value } = event.target;
@@ -334,8 +344,8 @@ const PosMainPage = (props) => {
     };
 
     const onChangeTaxCart = (event) => {
-        if(updateProducts.length == 0){
-            dispatch(addToast({text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR}));
+        if (updateProducts.length == 0) {
+            dispatch(addToast({ text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR }));
             return;
         }
         const min = 0;
@@ -676,43 +686,43 @@ const PosMainPage = (props) => {
                             <div className="main-table overflow-auto">
                                 <Table className="mb-0">
                                     <thead className="position-sticky top-0">
-                                    <tr>
-                                        <th>{getFormattedMessage("product.title")}</th>
-                                        <th className={updateProducts && updateProducts.length ? "text-center" : ""}>
-                                            {getFormattedMessage("pos-qty.title")}
-                                        </th>
-                                        <th>{getFormattedMessage("price.title")}</th>
-                                        <th colSpan="2">{getFormattedMessage("pos.subtotal.small.title")}</th>
-                                    </tr>
+                                        <tr>
+                                            <th>{getFormattedMessage("product.title")}</th>
+                                            <th className={updateProducts && updateProducts.length ? "text-center" : ""}>
+                                                {getFormattedMessage("pos-qty.title")}
+                                            </th>
+                                            <th>{getFormattedMessage("price.title")}</th>
+                                            <th colSpan="2">{getFormattedMessage("pos.subtotal.small.title")}</th>
+                                        </tr>
                                     </thead>
                                     <tbody className="border-0">
-                                    {updateProducts && updateProducts.length ? (
-                                        updateProducts.map((updateProduct, index) => {
-                                            return (
-                                                <ProductCartList
-                                                    singleProduct={updateProduct}
-                                                    key={`${updateProduct.item_type || 'product'}-${updateProduct.id}-${index}`}
-                                                    index={index}
-                                                    posAllProducts={posAllProducts}
-                                                    onClickUpdateItemInCart={onClickUpdateItemInCart}
-                                                    updatedQty={updatedQty}
-                                                    updateCost={updateCost}
-                                                    onDeleteCartItem={onDeleteCartItem}
-                                                    quantity={quantity}
-                                                    frontSetting={frontSetting}
-                                                    newCost={newCost}
-                                                    allConfigData={allConfigData}
-                                                    setUpdateProducts={setUpdateProducts}
-                                                />
-                                            );
-                                        })
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={4} className="custom-text-center text-gray-900 fw-bold py-5">
-                                                {getFormattedMessage("sale.product.table.no-data.label")}
-                                            </td>
-                                        </tr>
-                                    )}
+                                        {updateProducts && updateProducts.length ? (
+                                            updateProducts.map((updateProduct, index) => {
+                                                return (
+                                                    <ProductCartList
+                                                        singleProduct={updateProduct}
+                                                        key={`${updateProduct.item_type || 'product'}-${updateProduct.id}-${index}`}
+                                                        index={index}
+                                                        posAllProducts={posAllProducts}
+                                                        onClickUpdateItemInCart={onClickUpdateItemInCart}
+                                                        updatedQty={updatedQty}
+                                                        updateCost={updateCost}
+                                                        onDeleteCartItem={onDeleteCartItem}
+                                                        quantity={quantity}
+                                                        frontSetting={frontSetting}
+                                                        newCost={newCost}
+                                                        allConfigData={allConfigData}
+                                                        setUpdateProducts={setUpdateProducts}
+                                                    />
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={4} className="custom-text-center text-gray-900 fw-bold py-5">
+                                                    {getFormattedMessage("sale.product.table.no-data.label")}
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </Table>
                             </div>
@@ -787,7 +797,7 @@ const PosMainPage = (props) => {
                                     active={activeTab === 'products'}
                                     onClick={() => handleTabChange('products')}
                                 >
-                                    {getFormattedMessage("pos.products.tab.title" ,' ' )}
+                                    {getFormattedMessage("pos.products.tab.title", ' ')}
                                 </Nav.Link>
                             </Nav.Item>
                             <Nav.Item>
@@ -795,7 +805,7 @@ const PosMainPage = (props) => {
                                     active={activeTab === 'assistances'}
                                     onClick={() => handleTabChange('assistances')}
                                 >
-                                    {getFormattedMessage("pos.assistances.tab.title" , ' ')}
+                                    {getFormattedMessage("pos.assistances.tab.title", ' ')}
                                 </Nav.Link>
                             </Nav.Item>
                         </Nav>

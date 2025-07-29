@@ -40,7 +40,7 @@ class ProductAPIController extends AppBaseController
     {
         $perPage = getPageSize($request);
             $products = $this->productRepository;
-        //dd($products);
+
 
         if ($request->get('product_unit')) {
             $products->where('product_unit', $request->get('product_unit'));

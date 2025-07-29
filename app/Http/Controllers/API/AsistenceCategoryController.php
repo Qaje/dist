@@ -28,7 +28,8 @@ class AsistenceCategoryController extends AppBaseController
     public function index(Request $request): AsistenceCategoryCollection
     {
         $perPage = getPageSize($request);
-        $asistenceCategories = $this->asistenceCategoryRepository->paginate($perPage);
+        $asistenceCategories = $this->asistenceCategoryRepository;
+        $asistenceCategories = $asistenceCategories->paginate($perPage);
         AsistenceCategoryResource::usingWithCollection();
 
         return new AsistenceCategoryCollection($asistenceCategories);
@@ -43,24 +44,6 @@ class AsistenceCategoryController extends AppBaseController
         $asistenceCategory = $this->asistenceCategoryRepository->storeAsistenceCategory($input);
 
         return new AsistenceCategoryResource($asistenceCategory);
-        // try {
-        //     $validated = $request->validate(AsistenceCategory::rules());
-
-        //     $category = AsistenceCategory::create($validated);
-
-        //     return new AsistenceCategoryResource($category);
-
-        // } catch (ValidationException $e) {
-        //     return response()->json([
-        //         'message' => 'Error de validación',
-        //         'errors' => $e->errors()
-        //     ], 422);
-        // } catch (\Exception $e) {
-        //     return response()->json([
-        //         'message' => 'Error al crear la categoría',
-        //         'error' => $e->getMessage()
-        //     ], 500);
-        // }
     }
 
     /**
@@ -69,7 +52,6 @@ class AsistenceCategoryController extends AppBaseController
     public function show($id): AsistenceCategoryResource
     {
         $asistenceCategory = $this->asistenceCategoryRepository->with(['asistences'])->find($id);
-
         if (empty($asistenceCategory)) {
             return $this->sendError('Asistence Category not found');
         }
@@ -103,7 +85,7 @@ class AsistenceCategoryController extends AppBaseController
      */
     public function update(UpdateAsistenceCategoryRequest $request, AsistenceCategory $asistenceCategory): AsistenceCategoryResource
     {
-        $this->asistenceCategoryRepository->updateAsistenceCategory($request->all(), $asistenceCategory->id);
+        $this->asistenceCategoryRepository->update($request->all(), $asistenceCategory->id);
 
         $asistenceCategory->refresh();
 

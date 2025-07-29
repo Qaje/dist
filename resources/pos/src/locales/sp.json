@@ -953,6 +953,20 @@
     "assistances.title": "Servicio",
     "assistances.subtitle": "Servicios",
     "assistances.edit.title": "Editar Servicio",
-    "assistances.create.title": "Crear Servicio"
+    "assistances.create.title": "Crear Servicio",
+
+    "assistances_category.title": "Categorias Servicio",
+    "assistances_category.subtitle": "Categoria de Servicio",
+    "assistances_category.edit.title": "Editar Categoria de Servicio",
+    "assistances_category.create.title": "Crear Categoria de Servicio",
+
+    "assistancesCategory.table.name": "Nombre de la categoría",
+    "assistancesCategory.table.description": "Descripción de la categoría",
+    "assistancesCategory.table.status": "Estado",
+    "assistancesCategory.table.action": "Acción",
+    "assistancesCategory.table.createdAt": "Creado en",
+    "assistancesCategory.table.updatedAt": "Actualizado en"
+
+
 
 }

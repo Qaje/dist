@@ -186,7 +186,8 @@ const Assistances = ({
             sortField: "is_active",
             sortable: true,
             cell: (row) => (
-                <span className={`badge bg-${row.is_active ? 'success' : 'danger'}`}>
+                <span className={`badge bg-${row.is_active ?
+                    'success' : 'danger'}`}>
                     {row.is_active ? 'Activo' : 'Inactivo'}
                 </span>
             )

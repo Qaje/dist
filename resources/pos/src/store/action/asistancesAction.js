@@ -1,19 +1,21 @@
 import apiConfig from "../../config/apiConfig";
 import { apiBaseURL, asistancesActionType, toastType } from "../../constants";
 import { addToast } from "./toastAction";
+import { setLoading } from "./loadingAction";
 import {
     setTotalRecord,
     addInToTotalRecord,
     removeFromTotalRecord,
 } from "./totalRecordAction";
 import requestParam from "../../shared/requestParam";
-import { setLoading } from "./loadingAction";
 import { getFormattedMessage } from "../../shared/sharedMethod";
 import { setSavingButton } from "./saveButtonAction";
 import { callFetchDataApi } from "./updateBrand";
 
 export const fetchAssistances = (filter = {}, isLoading = true) => async (dispatch) => {
-    dispatch({ type: asistancesActionType.FETCH_ASSISTANCES_REQUEST });
+    dispatch({
+        type: asistancesActionType.FETCH_ASSISTANCES_REQUEST
+    });
 
 
     if (isLoading) {
@@ -27,7 +29,6 @@ export const fetchAssistances = (filter = {}, isLoading = true) => async (dispat
 
     try {
         const response = await apiConfig.get(url);
-        console.log('Respuesta API:', response.data);
 
         // Procesar los datos correctamente según la estructura JSON
         const processedData = response.data.data.map(item => ({
@@ -122,15 +123,8 @@ export const fetchAssistance =
 export const addAssistance = (assistanceData) => async (dispatch) => {
     try {
         dispatch({ type: asistancesActionType.ADD_ASSISTANCE_REQUEST });
-
-        console.log('🚀 Datos recibidos en action:', assistanceData);
-        console.log('📤 Enviando directamente al backend...');
-
         // Envío directo con la estructura que espera el backend
         const response = await apiConfig.post(apiBaseURL.ASSISTANCES, assistanceData);
-
-        console.log('✅ Respuesta del backend:', response.data);
-
         // Procesar la respuesta según la estructura de tu JSON de ejemplo
         let processedResponse;
 
@@ -174,8 +168,6 @@ export const addAssistance = (assistanceData) => async (dispatch) => {
             };
         }
 
-        console.log('✅ Datos procesados para el reducer:', processedResponse);
-
         dispatch({
             type: asistancesActionType.ADD_ASSISTANCE_SUCCESS,
             payload: processedResponse
@@ -189,12 +181,6 @@ export const addAssistance = (assistanceData) => async (dispatch) => {
 
         return processedResponse;
     } catch (error) {
-        console.error('❌ Error completo:', error);
-        console.error('❌ Error response:', error.response);
-        console.error('❌ Error data:', error.response?.data);
-        console.error('❌ Error status:', error.response?.status);
-        console.error('❌ Headers enviados:', error.config?.headers);
-        console.error('❌ Data enviada:', error.config?.data);
 
         const errorMessage = error.response?.data?.message ||
             error.response?.data?.error ||

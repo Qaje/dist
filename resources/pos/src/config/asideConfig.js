@@ -75,7 +75,15 @@ export const userMenu = [
                 fontIcon: <FontAwesomeIcon icon={faCube} />,
                 permission: Permissions.MANAGE_ASISTENCES,
             },
-        ],
+            {
+                title: "assistances_category.title",
+                to: "/user/assistances-category",
+                name: "assistances-category",
+                class: "d-flex",
+                fontIcon: <FontAwesomeIcon icon={faTableColumns} />,
+                permission: Permissions.MANAGE_ASISTENCES,
+            }
+        ]
     },
     {
         title: "products.title",

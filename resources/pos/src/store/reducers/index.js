@@ -118,6 +118,7 @@ import { cartReducer } from "./cartReducer";
 import dualScreenReducer from "./dualScreenReducer";
 import assistanceReducer from "./assistanceReducer";
 import posAllAssistanceReducer from "./pos/posAllAssistanceReducer";
+import assistanceCategoryReducer from "./assistanceCategoryReducer";
 
 export default combineReducers({
     loginUser: loginReducers,
@@ -237,6 +238,9 @@ export default combineReducers({
     frontCms: frontCmsReducer,
     cart: cartReducer,
     dualScreenSetting: dualScreenReducer,
-    asistances:assistanceReducer,
-    posAllAssistances: posAllAssistanceReducer
+    asistances: assistanceReducer,
+    posAllAssistances: posAllAssistanceReducer,
+    //assistanceCategories: assistanceCategoryReducer,
+    assistanceCategory: assistanceCategoryReducer, // ✅ AGREGAR ESTA LÍNEA
+
 });

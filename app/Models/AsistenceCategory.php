@@ -4,17 +4,25 @@ namespace App\Models;
 
 use App\Models\Contracts\JsonResourceful;
 use App\Traits\HasJsonResourcefulData;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class AsistenceCategory extends BaseModel implements JsonResourceful
+class AsistenceCategory extends BaseModel implements HasMedia,JsonResourceful
 {
-    use HasFactory, HasJsonResourcefulData;
+    use HasFactory, HasJsonResourcefulData,InteractsWithMedia;
+
+    protected $table = "asistence_categories";
 
     const JSON_API_TYPE = 'asistence-categories';
+
     public const PATH = 'asistence-category';
 
-    protected $fillable = ['name', 'description', 'is_active'];
+    protected $fillable = [
+        'name',
+        'description',
+        'is_active'
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -35,29 +43,27 @@ class AsistenceCategory extends BaseModel implements JsonResourceful
 
     public function prepareAttributes(): array
     {
+        $this->load('asistenceCategory');
+
         $fields = [
             'id' => $this->id,
             'name' => $this->name,
-            'description' => $this->description ?? '',
-            'is_active' => $this->is_active ?? true,
-            'created_at' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
-            'updated_at' => $this->updated_at ? $this->updated_at->format('Y-m-d H:i:s') : null,
+            'description' => $this->description,
+            'is_active' => $this->is_active,
         ];
 
         // Incluir relaciones si están cargadas
-        if ($this->relationLoaded('asistences')) {
-            $fields['asistences'] = $this->asistences->map(function ($asistence) {
-                return $asistence->prepareAttributes();
-            });
+        if ($this->relationLoaded('asistenceCategory')) {
+            $fields['asistenceCategory'] = $this->asistenceCategory->prepareAttributes();
         }
 
         return $fields;
     }
 
-    public static function getIdFilterFields(): array
-    {
-        return ['id'];
-    }
+//    public static function getIdFilterFields(): array
+//    {
+//        return ['id'];
+//    }
 
     public static function rules(): array
     {
@@ -67,26 +73,26 @@ class AsistenceCategory extends BaseModel implements JsonResourceful
             'is_active' => 'boolean',
         ];
     }
-
-    public static function updateRules($id): array
-    {
-        return [
-            'name' => 'required|string|max:255|unique:asistence_categories,name,' . $id,
-            'description' => 'nullable|string|max:1000',
-            'is_active' => 'boolean',
-        ];
-    }
-
-    // Scopes útiles para el CRUD
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeWithAsistencesCount($query)
-    {
-        return $query->withCount('asistences');
-    }
+//
+//    public static function updateRules($id): array
+//    {
+//        return [
+//            'name' => 'required|string|max:255|unique:asistence_categories,name,' . $id,
+//            'description' => 'nullable|string|max:1000',
+//            'is_active' => 'boolean',
+//        ];
+//    }
+//
+//    // Scopes útiles para el CRUD
+//    public function scopeActive($query)
+//    {
+//        return $query->where('is_active', true);
+//    }
+//
+//    public function scopeWithAsistencesCount($query)
+//    {
+//        return $query->withCount('asistences');
+//    }
 
 //     public function prepareLinks()
 // {

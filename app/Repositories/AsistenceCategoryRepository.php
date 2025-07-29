@@ -20,7 +20,9 @@ class AsistenceCategoryRepository extends BaseRepository
     protected $fieldSearchable = [
         'name',
         'description',
-        'is_active'
+        'is_active',
+        'created_at',
+        'updated_at',
     ];
 
     protected $allowedFields =[

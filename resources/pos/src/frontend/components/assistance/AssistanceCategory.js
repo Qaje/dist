@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import { fetchAssistanceCategories } from "../../../store/action/assistanceCategoryAction";
+import { fetchAssistanceCategories } from "../../../store/action/assistanceCategoriesAction";
 import { getFormattedMessage } from "../../../shared/sharedMethod";
 
 const AssistanceCategory = (props) => {
@@ -31,9 +31,8 @@ const AssistanceCategory = (props) => {
     return (
         <div className="d-flex flex-wrap justify-content-start assistance-category-block pb-3">
             <button
-                className={`btn btn-outline-primary me-2 mb-2 ${
-                    !assistanceCategoryId ? "active" : ""
-                }`}
+                className={`btn btn-outline-primary me-2 mb-2 ${!assistanceCategoryId ? "active" : ""
+                    }`}
                 onClick={() => onAssistanceCategoryClick({ id: null })}
             >
                 {getFormattedMessage("pos.all-assistances.title")}
@@ -43,11 +42,10 @@ const AssistanceCategory = (props) => {
                 assistanceCategories.map((assistanceCategory) => {
                     return (
                         <button
-                            className={`btn btn-outline-primary me-2 mb-2 ${
-                                assistanceCategoryId === assistanceCategory.id
+                            className={`btn btn-outline-primary me-2 mb-2 ${assistanceCategoryId === assistanceCategory.id
                                     ? "active"
                                     : ""
-                            }`}
+                                }`}
                             key={assistanceCategory.id}
                             onClick={() => onAssistanceCategoryClick(assistanceCategory)}
                         >
