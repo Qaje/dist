@@ -4,15 +4,38 @@ import { useForm } from 'react-hook-form';
 import { connect } from 'react-redux';
 import { getFormattedMessage } from '../../shared/sharedMethod';
 import { addAssistance } from '../../store/action/asistancesAction';
+import { fetchAssistanceCategories } from '../../store/action/assistanceCategoriesAction';
 
-const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) => {
+const CreateAssistance = ({
+    addAssistance,
+    onSubmitSuccess,
+    categories = [],
+    fetchAssistanceCategories,
+    isLoadingCategories = false
+}) => {
     const [show, setShow] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { register, handleSubmit, formState: { errors }, reset } = useForm();
 
+    // Cargar categorías cuando se abre el modal
+    useEffect(() => {
+        if (show && categories.length === 0) {
+            console.log('🔄 Cargando categorías...');
+            fetchAssistanceCategories({});
+        }
+    }, [show, categories.length, fetchAssistanceCategories]);
+
     const handleClose = () => {
         reset();
         setShow(false);
+    };
+
+    const handleShow = () => {
+        setShow(true);
+        // Cargar categorías al abrir el modal
+        if (categories.length === 0) {
+            fetchAssistanceCategories({});
+        }
     };
 
     const onSubmit = async (data) => {
@@ -25,11 +48,17 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
                 throw new Error('El campo name es obligatorio');
             }
 
+            // Buscar la categoría seleccionada para obtener su nombre
+            const selectedCategory = categories.find(cat =>
+                cat.id === parseInt(data.asistence_category_id) ||
+                cat.attributes?.id === parseInt(data.asistence_category_id)
+            );
+
             // Procesar los datos exactamente como los espera el backend
             const assistanceData = {
                 name: data.name.trim(),
                 code: data.code?.trim() || '',
-                asistence_category_id: parseInt(data.asistence_category_id) || 1,
+                asistence_category_id: parseInt(data.asistence_category_id) || null,
                 asistence_cost: parseFloat(data.asistence_cost) || 0,
                 asistence_price: parseFloat(data.asistence_price) || 0,
                 asistence_unit: data.asistence_unit?.trim() || '1',
@@ -40,10 +69,10 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
                 notes: data.notes?.trim() || null,
                 is_active: Boolean(data.is_active !== false), // true por defecto
                 // Incluir category según tu estructura
-                category: {
-                    id: parseInt(data.asistence_category_id) || 1,
-                    name: data.asistence_category_id === '1' ? 'SERVICIO KATERING' : 'Otra categoría'
-                }
+                category: selectedCategory ? {
+                    id: selectedCategory.id || selectedCategory.attributes?.id,
+                    name: selectedCategory.name || selectedCategory.attributes?.name
+                } : null
             };
 
             console.log('📦 Datos procesados para enviar:', assistanceData);
@@ -69,9 +98,12 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
         }
     };
 
+    // Debug: mostrar categorías disponibles
+    console.log('📂 Categorías disponibles:', categories);
+
     return (
         <>
-            <Button variant="primary" onClick={() => setShow(true)}>
+            <Button variant="primary" onClick={handleShow}>
                 {getFormattedMessage('asistance.create.title')}
             </Button>
 
@@ -116,24 +148,47 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
                                     )}
                                 </Form.Group>
                             </div>
+
+                            {/* SELECT DE CATEGORÍAS - AGREGADO */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Categoría *</Form.Label>
-                                    <Form.Select
-                                        {...register('asistence_category_id', { required: true })}
-                                        isInvalid={!!errors.asistence_category_id}
-                                    >
-                                        <option value="">Seleccione una categoría</option>
-                                        <option value="1">SERVICIO KATERING</option>
-                                        {/* Agregar más categorías dinámicamente si tienes el listado */}
-                                    </Form.Select>
+                                    {isLoadingCategories ? (
+                                        <Form.Control as="select" disabled>
+                                            <option>Cargando categorías...</option>
+                                        </Form.Control>
+                                    ) : (
+                                        <Form.Select
+                                            {...register('asistence_category_id', { required: true })}
+                                            isInvalid={!!errors.asistence_category_id}
+                                        >
+                                            <option value="">Selecciona una categoría</option>
+                                            {categories.map((category) => {
+                                                // Manejar tanto estructuras normales como con attributes
+                                                const categoryId = category.id || category.attributes?.id;
+                                                const categoryName = category.name || category.attributes?.name;
+
+                                                return (
+                                                    <option key={categoryId} value={categoryId}>
+                                                        {categoryName}
+                                                    </option>
+                                                );
+                                            })}
+                                        </Form.Select>
+                                    )}
                                     {errors.asistence_category_id && (
                                         <Form.Control.Feedback type="invalid">
-                                            Seleccione una categoría
+                                            Selecciona una categoría
                                         </Form.Control.Feedback>
+                                    )}
+                                    {categories.length === 0 && !isLoadingCategories && (
+                                        <Form.Text className="text-muted">
+                                            No hay categorías disponibles. Verifica tu conexión a la API.
+                                        </Form.Text>
                                     )}
                                 </Form.Group>
                             </div>
+
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Costo</Form.Label>
@@ -254,4 +309,16 @@ const CreateAssistance = ({ addAssistance, onSubmitSuccess, categories = [] }) =
     );
 };
 
-export default connect(null, { addAssistance })(CreateAssistance);
+const mapStateToProps = (state) => {
+    console.log('🗺️ CreateAssistance mapStateToProps - Estado completo:', state);
+    console.log('🗺️ CreateAssistance mapStateToProps - assistanceCategory:', state.assistanceCategory);
+    return {
+        categories: state.assistanceCategory?.data || [],
+        isLoadingCategories: state.assistanceCategory?.loading || false
+    };
+};
+
+export default connect(mapStateToProps, {
+    addAssistance,
+    fetchAssistanceCategories
+})(CreateAssistance);

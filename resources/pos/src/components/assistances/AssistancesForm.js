@@ -144,13 +144,16 @@ const AssistanceForm = (props) => {
                             <label className='form-label'>
                                 Categoría:
                             </label>
-                            <input
-                                type='text'
+                            <select
                                 name='category'
                                 value={assistance.category}
                                 className='form-control'
                                 onChange={onChangeInput}
-                            />
+                            ><option value="">Selecciona una categoría</option>
+                                {props.categories && props.categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.attributes?.name || cat.name}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className='col-md-6 mb-3'>

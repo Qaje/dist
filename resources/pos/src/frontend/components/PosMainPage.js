@@ -1,25 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Col, Container, Row, Table, Nav } from "react-bootstrap-v5";
+import { Col, Container, Row, Table, Nav, Button } from "react-bootstrap-v5";
 import { connect, useDispatch, useSelector } from "react-redux";
 import moment from "moment";
 import { useReactToPrint } from "react-to-print";
 import Category from "./Category";
 import Brands from "./Brand";
 import Product from "./product/Product";
-import Assistance from "./assistance/Assistance"; // Nuevo componente
-import AssistanceCategory from "./assistance/AssistanceCategory"; // Nuevo componente
+import Assistance from "./assistance/Assistance";
+import AssistanceCategory from "./assistance/AssistanceCategory";
 import ProductCartList from "./cart-product/ProductCartList";
 import {
-    posSearchNameProduct,
     posSearchCodeProduct,
+    posSearchNameProduct,
 } from "../../store/action/pos/posfetchProductAction";
 import {
-    fetchAssistanceClickable, posAllAssistance
-} from "../../store/action/pos/posAllAssistanceAction"; // Nueva acción
+    fetchAssistanceClickable,
+    posAllAssistance
+} from "../../store/action/pos/posAllAssistanceAction";
 import ProductSearchbar from "./product/ProductSearchbar";
-import AssistanceSearchbar from "./assistance/AssistanceSearchbar"; // Nuevo componente
+import AssistanceSearchbar from "./assistance/AssistanceSearchbar";
 import { prepareCartArray } from "../shared/PrepareCartArray";
-import { prepareMixedCartArray } from "../shared/PrepareCartAssistanceArray"; // Nueva función
+import { prepareMixedCartArray } from "../shared/PrepareCartAssistanceArray";
 import ProductDetailsModel from "../shared/ProductDetailsModel";
 import CartItemMainCalculation from "./cart-product/CartItemMainCalculation";
 import PosHeader from "./header/PosHeader";
@@ -48,7 +49,14 @@ import {
     getFormattedMessage,
     getFormattedOptions,
 } from "../../shared/sharedMethod";
-import { discountType, paymentMethodOptions, productActionType, assistanceActionType, asistancesActionType, toastType } from "../../constants";
+import {
+    discountType,
+    paymentMethodOptions,
+    productActionType,
+    assistanceActionType,
+    asistancesActionType,
+    toastType
+} from "../../constants";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
 import CustomerForm from "./customerModel/CustomerForm";
 import HoldListModal from "./holdListModal/HoldListModal";
@@ -64,7 +72,7 @@ const PosMainPage = (props) => {
     const {
         onClickFullScreen,
         posAllProducts,
-        posAllAssistances, // Nueva prop
+        posAllAssistances,
         customCart,
         posCashPaymentAction,
         frontSetting,
@@ -74,7 +82,7 @@ const PosMainPage = (props) => {
         paymentDetails,
         allConfigData,
         fetchBrandClickable,
-        fetchAssistanceClickable, // Nueva prop
+        fetchAssistanceClickable,
         posAllTodaySaleOverAllReport,
         fetchHoldLists,
         holdListData,
@@ -89,7 +97,7 @@ const PosMainPage = (props) => {
     const [isOpenCartItemUpdateModel, setIsOpenCartItemUpdateModel] = useState(false);
     const [product, setProduct] = useState(null);
     const [cartProductIds, setCartProductIds] = useState([]);
-    const [cartAssistanceIds, setCartAssistanceIds] = useState([]); // Nuevo estado
+    const [cartAssistanceIds, setCartAssistanceIds] = useState([]);
     const [newCost, setNewCost] = useState("");
     const [paymentPrint, setPaymentPrint] = useState({});
     const [cashPayment, setCashPayment] = useState(false);
@@ -98,13 +106,14 @@ const PosMainPage = (props) => {
     const [productMsg, setProductMsg] = useState(0);
     const [brandId, setBrandId] = useState();
     const [categoryId, setCategoryId] = useState();
-    const [assistanceCategoryId, setAssistanceCategoryId] = useState(); // Nuevo estado
+    const [assistanceCategoryId, setAssistanceCategoryId] = useState();
     const [selectedCustomerOption, setSelectedCustomerOption] = useState(null);
     const [selectedOption, setSelectedOption] = useState(null);
     const [updateHolList, setUpdateHoldList] = useState(false);
     const [hold_ref_no, setHold_ref_no] = useState("");
     const [page, setPage] = useState(1);
-    const [activeTab, setActiveTab] = useState('products'); // Nuevo estado para tabs
+    const [activeTab, setActiveTab] = useState('products');
+    const [loading, setLoading] = useState(false);
 
     const [cartItemValue, setCartItemValue] = useState({
         discount_type: discountType.FIXED,
@@ -122,6 +131,57 @@ const PosMainPage = (props) => {
         },
     });
 
+    // Función mejorada para calcular el costo con validación de tipos
+    const calculateItemCost = (item) => {
+        if (!item) return 0;
+
+        console.log('Calculating cost for item:', item);
+
+        if (item.item_type === 'assistance') {
+            // Para asistencias, usar asistence_price
+            const price = item.asistence_price ||
+                item.attributes?.asistence_price ||
+                item.price ||
+                item.attributes?.price ||
+                0;
+            return Number(price);
+        } else {
+            // Para productos, usar product_price o calculateProductCost
+            const price = item.product_price ||
+                item.fix_net_unit ||
+                item.price ||
+                calculateProductCost(item) ||
+                0;
+            return Number(price);
+        }
+    };
+
+    const calculateCartTotals = () => {
+        if (!updateProducts || updateProducts.length === 0) {
+            return {
+                totalQty: '0.00',
+                subTotal: 0
+            };
+        }
+
+        const quantities = updateProducts.map(item => Number(item.quantity || 0));
+        const totalQty = quantities.reduce((sum, qty) => sum + qty, 0).toFixed(2);
+
+        const itemTotals = updateProducts.map(item => {
+            const itemCost = calculateItemCost(item);
+            const quantity = Number(item.quantity || 0);
+            const total = itemCost * quantity;
+
+            console.log(`Item: ${item.name}, Cost: ${itemCost}, Qty: ${quantity}, Total: ${total}`);
+            return total;
+        });
+
+        const subTotal = itemTotals.reduce((sum, total) => sum + total, 0);
+
+        return { totalQty, subTotal };
+    };
+
+
     const [errors, setErrors] = useState({ notes: "" });
     const [changeReturn, setChangeReturn] = useState(0);
     const [showCloseDetailsModal, setShowCloseDetailsModal] = useState(false);
@@ -130,29 +190,17 @@ const PosMainPage = (props) => {
     const { closeRegisterDetails } = useSelector((state) => state);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const { totalQty, subTotal } = calculateCartTotals();
+    const discountTotal = subTotal - (cartItemValue.discount || 0);
+    const taxTotal = (discountTotal * (cartItemValue.tax || 0)) / 100;
+    const mainTotal = discountTotal + taxTotal;
+    const grandTotal = (Number(mainTotal) + Number(cartItemValue.shipping || 0)).toFixed(2);
 
-    // Cálculos del carrito (modificados para soportar productos y asistencias)
-    const localCart = updateProducts.map((updateQty) => Number(updateQty.quantity));
-    const totalQty = localCart.length > 0 && Number(localCart?.reduce((cart, current) => cart + current, 0)).toFixed(2);
 
-    const localTotal = updateProducts.map((item) => {
-        if (item.item_type === 'assistance') {
-            return item.attributes?.price * item.quantity || item.price * item.quantity;
-        } else {
-            return calculateProductCost(item).toFixed(2) * item.quantity;
-        }
-    });
-
-    const subTotal = localTotal.length > 0 && localTotal?.reduce((cart, current) => cart + current, 0);
 
     const [holdListId, setHoldListValue] = useState({
         referenceNumber: "",
     });
-
-    const discountTotal = subTotal - cartItemValue.discount;
-    const taxTotal = (discountTotal * cartItemValue.tax) / 100;
-    const mainTotal = discountTotal + taxTotal;
-    const grandTotal = (Number(mainTotal) + Number(cartItemValue.shipping)).toFixed(2);
 
     useEffect(() => {
         setPaymentPrint({
@@ -201,6 +249,10 @@ const PosMainPage = (props) => {
         setUpdateProducts(updateProducts);
     }, [quantity, grandTotal]);
 
+    useEffect(() => {
+        debugCartData();
+    }, [updateProducts]);
+
     const handleValidation = () => {
         let errors = {};
         let isValid = false;
@@ -213,50 +265,39 @@ const PosMainPage = (props) => {
         return isValid;
     };
 
-    // Filtros de categoría para productos
     const setCategory = (item) => {
         setCategoryId(item);
     };
 
-    // Filtros de categoría para asistencias
     const setAssistanceCategory = (item) => {
         setAssistanceCategoryId(item);
     };
 
+    // Efecto mejorado para manejar cambios de filtros y tabs
     useEffect(() => {
-        if (selectedOption) {
+        console.log("---selectedOption", selectedOption)
+        console.log("---activeTab", activeTab)
+        if (selectedOption && selectedOption.value) {
             if (activeTab === 'products') {
                 dispatch({ type: productActionType.RESET_PRODUCT });
                 setPage(1);
-                fetchBrandClickable(brandId, categoryId, selectedOption.value && selectedOption.value, 1, "", true);
+                fetchBrandClickable(brandId, categoryId, selectedOption.value, 1, "", true);
             } else if (activeTab === 'assistances') {
-                // Corregir el tipo de acción
                 dispatch({ type: asistancesActionType.RESET_ASSISTANCE });
                 setPage(1);
-                // Llamar con resetPage=true para limpiar la lista
-                fetchAssistanceClickable(assistanceCategoryId, selectedOption.value && selectedOption.value, 1, "", true);
+                fetchAssistanceClickable(assistanceCategoryId, selectedOption.value, 1, "", true);
             }
         }
     }, [selectedOption, brandId, categoryId, assistanceCategoryId, activeTab]);
 
-    useEffect(() => {
-        if (activeTab === 'assistances' && selectedOption) {
-            // Cargar todas las asistencias para el dropdown/lista completa
-            dispatch(posAllAssistance({
-                warehouse_id: selectedOption.value
-            }));
-        }
-    }, [activeTab, selectedOption]);
-
-    useEffect(() => {
-        if (activeTab === 'assistances-category' && selectedOption) {
-            // Cargar todas las asistencias para el dropdown/lista completa
-            dispatch(posAllAssistance({
-                warehouse_id: selectedOption.value
-            }));
-        }
-    }, [activeTab, selectedOption]);
-
+    // Cargar todas las asistencias cuando se cambia al tab de assistances
+    // useEffect(() => {
+    //     if (activeTab === 'assistances' && selectedOption && selectedOption.value) {
+    //         dispatch(posAllAssistance({
+    //             warehouse_id: selectedOption.value
+    //         }));
+    //     }
+    // }, [activeTab, selectedOption, dispatch]);
 
     const setBrand = (item) => {
         setBrandId(item);
@@ -308,8 +349,11 @@ const PosMainPage = (props) => {
     }, [updateProducts, selectedCustomerOption, selectedOption, cartItemValue, subTotal, grandTotal, cashPaymentValue, paymentValue]);
 
     const onChangeCart = (event) => {
-        if (updateProducts.length == 0) {
-            dispatch(addToast({ text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR }));
+        if (updateProducts.length === 0) {
+            dispatch(addToast({
+                text: getFormattedMessage("pos.cash-payment.product-error.message"),
+                type: toastType.ERROR
+            }));
             return;
         }
         const { value } = event.target;
@@ -321,15 +365,15 @@ const PosMainPage = (props) => {
         }
 
         let discount = cartItemValue.discount;
-        if (event.target.name == 'discount_value') {
-            if (cartItemValue.discount_type == discountType.FIXED) {
+        if (event.target.name === 'discount_value') {
+            if (cartItemValue.discount_type === discountType.FIXED) {
                 discount = value;
             } else {
                 discount = (Number(subTotal) * Number(value)) / 100;
             }
         }
         if (event.target.name === 'discount_type') {
-            if (value == discountType.FIXED) {
+            if (value === discountType.FIXED) {
                 discount = cartItemValue.discount_value;
             } else {
                 discount = (Number(subTotal) * Number(cartItemValue.discount_value)) / 100;
@@ -344,8 +388,11 @@ const PosMainPage = (props) => {
     };
 
     const onChangeTaxCart = (event) => {
-        if (updateProducts.length == 0) {
-            dispatch(addToast({ text: getFormattedMessage("pos.cash-payment.product-error.message"), type: toastType.ERROR }));
+        if (updateProducts.length === 0) {
+            dispatch(addToast({
+                text: getFormattedMessage("pos.cash-payment.product-error.message"),
+                type: toastType.ERROR
+            }));
             return;
         }
         const min = 0;
@@ -402,7 +449,10 @@ const PosMainPage = (props) => {
     };
 
     const onDeleteCartItem = (itemId, itemType = 'product') => {
-        const existingCart = updateProducts.filter((e) => !(e.id === itemId && (e.item_type === itemType || (!e.item_type && itemType === 'product'))));
+        const existingCart = updateProducts.filter((e) => {
+            const currentItemType = e.item_type || 'product';
+            return !(e.id === itemId && currentItemType === itemType);
+        });
         updateCart(existingCart);
     };
 
@@ -412,36 +462,31 @@ const PosMainPage = (props) => {
 
     const onScrollCallAPI = (page) => {
         if (activeTab === 'products') {
-            fetchBrandClickable(brandId, categoryId, selectedOption.value && selectedOption.value, page);
+            fetchBrandClickable(brandId, categoryId, selectedOption.value, page);
         } else if (activeTab === 'assistances') {
-            // Pasar todos los parámetros necesarios
             fetchAssistanceClickable(
-                assistanceCategoryId,
-                selectedOption.value && selectedOption.value,
+                assistanceCategoryId || null,
+                selectedOption.value,
                 page,
-                "", // search string vacío
-                false // resetPage = false para paginación
+                "",
+                false
             );
         }
     };
 
-
     const onSearchProduct = (search) => {
-        fetchBrandClickable(brandId, categoryId, selectedOption.value && selectedOption.value, 1, search, true);
+        fetchBrandClickable(brandId, categoryId, selectedOption.value, 1, search, true);
     };
 
-    // const onSearchAssistance = (search) => {
-    //     fetchAssistanceClickable(assistanceCategoryId, selectedOption.value && selectedOption.value, 1, search, true);
-    // };
     const onSearchAssistance = (search) => {
         dispatch({ type: asistancesActionType.RESET_ASSISTANCE });
         setPage(1);
         fetchAssistanceClickable(
-            assistanceCategoryId,
-            selectedOption.value && selectedOption.value,
+            assistanceCategoryId || null,
+            selectedOption.value,
             1,
             search,
-            true // resetPage = true para nueva búsqueda
+            true
         );
     };
 
@@ -451,15 +496,50 @@ const PosMainPage = (props) => {
             setPage(1);
 
             if (tab === 'products') {
-                // Limpiar filtros de asistencias
                 setAssistanceCategoryId(null);
+                if (selectedOption?.value && (!posAllProducts?.length || brandId || categoryId)) {
+                    dispatch({ type: productActionType.RESET_PRODUCT });
+                    setLoading(true); // Activar loading antes de la llamada
+                    fetchBrandClickable(brandId, categoryId, selectedOption.value, 1, "", true)
+                        .finally(() => setLoading(false)); // Desactivar loading al finalizar
+                }
             } else if (tab === 'assistances') {
-                // Limpiar filtros de productos
                 setBrandId(null);
                 setCategoryId(null);
+                if (selectedOption?.value) {
+                    dispatch({ type: asistancesActionType.RESET_ASSISTANCE });
+                    setLoading(true); // Activar loading antes de la llamada
+                    fetchAssistanceClickable(null, selectedOption.value, 1, "", true)
+                        .finally(() => setLoading(false)); // Desactivar loading al finalizar
+                }
             }
         }
     };
+    // const handleTabChange = (tab) => {
+    //     if (tab !== activeTab) {
+    //         setActiveTab(tab);
+    //         setPage(1);
+
+    //         if (tab === 'products') {
+    //             setAssistanceCategoryId(null);
+    //             // Limpiar y recargar productos solo si es necesario
+    //             if (selectedOption?.value && (!posAllProducts?.length || brandId || categoryId)) {
+    //                 dispatch({ type: productActionType.RESET_PRODUCT });
+    //                 fetchBrandClickable(brandId, categoryId, selectedOption.value, 1, "", true);
+    //             }
+    //         } else if (tab === 'assistances') {
+    //             setBrandId(null);
+    //             setCategoryId(null);
+    //             // SOLO una llamada para cargar asistencias
+    //             if (selectedOption?.value) {
+    //                 dispatch({ type: asistancesActionType.RESET_ASSISTANCE });
+    //                 fetchAssistanceClickable(null, selectedOption.value, 1, "", true);
+    //                 // REMOVER esta línea duplicada:
+    //                 // dispatch(posAllAssistance({ warehouse_id: selectedOption.value }));
+    //             }
+    //         }
+    //     }
+    // };
 
     const customerModel = (val) => {
         setModalShowCustomer(val);
@@ -485,16 +565,85 @@ const PosMainPage = (props) => {
         return formValue;
     };
 
+    const debugSaleItems = () => {
+        console.log('=== DEBUGGING SALE ITEMS ===');
+        const sale_items = updateProducts.map(item => {
+            const saleItem = {
+                id: item.id,
+                type: item.item_type || 'product',
+                name: item.name,
+                quantity: item.quantity,
+            };
+
+            if (item.item_type === 'assistance') {
+                saleItem.assistance_id = item.id;
+                saleItem.price = Number(item.asistence_price || item.price || 0);
+                saleItem.original_asistence_price = item.asistence_price;
+                saleItem.original_price = item.price;
+            } else {
+                saleItem.product_id = item.id;
+                saleItem.price = Number(item.product_price || item.price || item.fix_net_unit || 0);
+                saleItem.original_product_price = item.product_price;
+                saleItem.original_price = item.price;
+                saleItem.original_fix_net_unit = item.fix_net_unit;
+            }
+
+            return saleItem;
+        });
+
+        console.log('Prepared sale_items:', sale_items);
+        console.log('============================');
+        return sale_items;
+    };
+
+
+    const sale_items = updateProducts.map(item => {
+        if (item.item_type === 'assistance') {
+            return {
+                assistance_id: item.id,
+                quantity: Number(item.quantity) || 1,
+                price: Number(item.price) || 0,
+            };
+        } else {
+            return {
+                product_id: item.id,
+                quantity: Number(item.quantity) || 1,
+                price: Number(item.price) || 0,
+            };
+        }
+    })
+    console.log(sale_items, 'sale_items');
+
+
     const prepareData = (updateProducts) => {
+        // Corregir la preparación de sale_items
+        const sale_items = updateProducts.map(item => {
+            if (item.item_type === 'assistance') {
+                return {
+                    assistance_id: item.id,
+                    quantity: Number(item.quantity) || 1,
+                    // Usar el precio correcto para asistencias
+                    price: Number(item.asistence_price || item.price || 0),
+                };
+            } else {
+                return {
+                    product_id: item.id,
+                    quantity: Number(item.quantity) || 1,
+                    // Usar el precio correcto para productos
+                    price: Number(item.product_price || item.price || item.fix_net_unit || 0),
+                };
+            }
+        });
+
         const formValue = {
             date: moment(new Date()).format("YYYY-MM-DD"),
-            customer_id: selectedCustomerOption && selectedCustomerOption[0]
-                ? selectedCustomerOption[0].value
-                : selectedCustomerOption && selectedCustomerOption.value,
+            customer_id: selectedCustomerOption && selectedCustomerOption[0] ?
+                selectedCustomerOption[0].value :
+                selectedCustomerOption && selectedCustomerOption.value,
             warehouse_id: selectedOption && selectedOption[0]
                 ? selectedOption[0].value
                 : selectedOption && selectedOption.value,
-            sale_items: updateProducts,
+            sale_items: sale_items,
             grand_total: grandTotal,
             ...(cashPaymentValue?.payment_status?.value === 1
                 ? { payment_type: paymentValue?.payment_type?.value }
@@ -544,7 +693,7 @@ const PosMainPage = (props) => {
             });
             dispatch(fetchTax());
             setCartProductIds("");
-            setCartAssistanceIds(""); // Limpiar IDs de assistances
+            setCartAssistanceIds("");
         }
     };
 
@@ -563,6 +712,125 @@ const PosMainPage = (props) => {
     const handleRegisterDetailsPrint = useReactToPrint({
         content: () => registerDetailsRef.current,
     });
+
+    const addAssistanceToCart = (assistance) => {
+        console.log('Adding assistance to cart:', assistance);
+
+        if (!assistance || !assistance.id) {
+            console.error('❌ Invalid assistance data:', assistance);
+            return;
+        }
+
+        const existingCart = [...updateProducts];
+        const assistanceInCart = existingCart.find(
+            item => item.id === assistance.id && item.item_type === 'assistance'
+        );
+
+        if (assistanceInCart) {
+            assistanceInCart.quantity = (assistanceInCart.quantity || 1) + 1;
+        } else {
+            const assistancePrice = Number(assistance.attributes?.asistence_price || 0);
+
+            const preparedAssistance = {
+                id: assistance.id,
+                item_type: 'assistance',
+                name: assistance.attributes?.name || 'Servicio sin nombre',
+                code: assistance.attributes?.code || '',
+                // Asegurar precios correctos
+                asistence_price: assistancePrice,
+                price: assistancePrice, // Campo alternativo
+                cost: Number(assistance.attributes?.asistence_cost || 0),
+                unit: assistance.attributes?.asistence_unit || '1',
+                estimated_duration: Number(assistance.attributes?.estimated_duration || 0),
+                quantity: 1,
+                order_tax: Number(assistance.attributes?.order_tax || 0),
+                tax_type: assistance.attributes?.tax_type || '1',
+                description: assistance.attributes?.description || '',
+                notes: assistance.attributes?.notes || '',
+                category_id: assistance.attributes?.asistence_category_id,
+                warehouse_id: selectedOption?.value,
+                image: assistance.attributes?.image_url || '/images/default-service-icon.png',
+                attributes: assistance.attributes,
+            };
+
+            existingCart.push(preparedAssistance);
+        }
+
+        setUpdateProducts(existingCart);
+    };
+
+    // const addAssistanceToCart = (assistance) => {
+    //     console.log('Adding assistance to cart:', assistance);
+
+    //     if (!assistance || !assistance.id) {
+    //         console.error('❌ Invalid assistance data:', assistance);
+    //         return;
+    //     }
+
+    //     const existingCart = [...updateProducts];
+    //     const assistanceInCart = existingCart.find(
+    //         item => item.id === assistance.id && item.item_type === 'assistance'
+    //     );
+
+    //     if (assistanceInCart) {
+    //         // Si ya existe, incrementar cantidad
+    //         assistanceInCart.quantity = (assistanceInCart.quantity || 1) + 1;
+    //         console.log('Incremented quantity for assistance:', assistanceInCart);
+    //     } else {
+    //         // Si no existe, añadir nueva asistencia
+    //         const preparedAssistance = {
+    //             id: assistance.id,
+    //             item_type: 'assistance',
+    //             name: assistance.attributes?.name || 'Servicio sin nombre',
+    //             code: assistance.attributes?.code || '',
+    //             price: Number(assistance.attributes?.asistence_price || 0),
+    //             cost: Number(assistance.attributes?.asistence_cost || 0),
+    //             unit: assistance.attributes?.asistence_unit || '1',
+    //             estimated_duration: Number(assistance.attributes?.estimated_duration || 0),
+    //             quantity: 1,
+    //             order_tax: Number(assistance.attributes?.order_tax || 0),
+    //             tax_type: assistance.attributes?.tax_type || '1',
+    //             description: assistance.attributes?.description || '',
+    //             notes: assistance.attributes?.notes || '',
+    //             category_id: assistance.attributes?.asistence_category_id,
+    //             warehouse_id: selectedOption?.value,
+    //             image: assistance.attributes?.image_url || '/images/default-service-icon.png',
+    //             attributes: assistance.attributes,
+    //             // Campos adicionales para compatibilidad con el sistema existente
+    //             asistence_price: Number(assistance.attributes?.asistence_price || 0),
+    //             asistence_cost: Number(assistance.attributes?.asistence_cost || 0),
+    //             asistence_unit: assistance.attributes?.asistence_unit || '1'
+    //         };
+
+    //         existingCart.push(preparedAssistance);
+    //         console.log('Added new assistance to cart:', preparedAssistance);
+    //     }
+
+    //     setUpdateProducts(existingCart);
+    //     updateCart(existingCart);
+
+    //     // Actualizar IDs para control
+    //     const assistanceIds = existingCart
+    //         .filter(item => item.item_type === 'assistance')
+    //         .map(item => item.id);
+    //     setCartAssistanceIds(assistanceIds);
+    // };
+
+
+
+    const isAssistanceInCart = (assistanceId) => {
+        return updateProducts.some(item =>
+            item.id === assistanceId && item.item_type === 'assistance'
+        );
+    };
+
+    // 2. Define la función para verificar si una asistencia está en el carrito
+    // const isAssistanceInCart = (assistanceId) => {
+    //     return updateProducts.some(item =>
+    //         item.id === assistanceId && item.item_type === 'assistance'
+    //     );
+    // };
+
 
     const loadPrintBlock = () => {
         return (
@@ -654,14 +922,53 @@ const PosMainPage = (props) => {
         }
     };
 
-    const debugAssistanceCall = () => {
-        console.log('Debug - Assistance Call Parameters:', {
-            assistanceCategoryId,
-            warehouseId: selectedOption?.value,
-            page,
-            activeTab,
-            selectedOption
+    const prepareAssistanceForCart = (assistance) => {
+        const attributes = assistance.attributes || {};
+
+        return {
+            id: assistance.id,
+            item_type: 'assistance', // Identificador crucial
+            name: attributes.name || 'Servicio sin nombre',
+            code: attributes.code || '',
+            // Usar los campos correctos de tu JSON
+            price: attributes.asistence_price || 0,
+            cost: attributes.asistence_cost || 0,
+            unit: attributes.asistence_unit || '1',
+            estimated_duration: attributes.estimated_duration || 0,
+            quantity: 1, // Cantidad inicial
+            // Campos de impuestos
+            order_tax: attributes.order_tax || 0,
+            tax_type: attributes.tax_type || '1',
+            // Información adicional
+            description: attributes.description || '',
+            notes: attributes.notes || '',
+            category_id: attributes.asistence_category_id,
+            // Mantener referencia completa
+            attributes: attributes
+        };
+    };
+
+    const debugCartData = () => {
+        console.log('=== CART DEBUG INFO ===');
+        console.log('Update Products:', updateProducts);
+        console.log('Active Tab:', activeTab);
+
+        const products = updateProducts.filter(item => item.item_type !== 'assistance');
+        const assistances = updateProducts.filter(item => item.item_type === 'assistance');
+
+        console.log('Products in cart:', products.length, products);
+        console.log('Assistances in cart:', assistances.length, assistances);
+
+        console.log('Totals calculation:');
+        updateProducts.forEach(item => {
+            const cost = calculateItemCost(item);
+            const qty = item.quantity || 0;
+            const total = cost * qty;
+            console.log(`- ${item.name}: ${cost} x ${qty} = ${total}`);
         });
+
+        console.log('Final totals:', { totalQty, subTotal, grandTotal });
+        console.log('======================');
     };
 
     return (
@@ -790,28 +1097,27 @@ const PosMainPage = (props) => {
                             />
                         </div>
 
-                        {/* Tabs para alternar entre Productos y Asistencias */}
-                        <Nav variant="tabs" className="mb-3">
-                            <Nav.Item>
-                                <Nav.Link
-                                    active={activeTab === 'products'}
-                                    onClick={() => handleTabChange('products')}
-                                >
-                                    {getFormattedMessage("pos.products.tab.title", ' ')}
-                                </Nav.Link>
-                            </Nav.Item>
-                            <Nav.Item>
-                                <Nav.Link
-                                    active={activeTab === 'assistances'}
-                                    onClick={() => handleTabChange('assistances')}
-                                >
-                                    {getFormattedMessage("pos.assistances.tab.title", ' ')}
-                                </Nav.Link>
-                            </Nav.Item>
-                        </Nav>
-
                         <div className="custom-card h-100 mb-3">
                             <div className="p-3">
+                                <Nav className='button-list mb-2 d-flex flex-nowrap'>
+                                    <Nav.Item className='button-list__item me-2'>
+                                        <Button
+                                            variant={activeTab === 'products' ? 'primary' : 'outline-primary'}
+                                            onClick={() => handleTabChange('products')}
+                                        >
+                                            {getFormattedMessage('Productos') || 'Productos'}
+                                        </Button>
+                                    </Nav.Item>
+                                    <Nav.Item className='button-list__item me-2'>
+                                        <Button
+                                            variant={activeTab === 'assistances' ? 'info' : 'outline-info'}
+                                            onClick={() => handleTabChange('assistances')}
+                                        >
+                                            {getFormattedMessage('Servicios') || 'Servicios'}
+                                        </Button>
+                                    </Nav.Item>
+                                </Nav>
+                                <hr />
                                 {activeTab === 'products' ? (
                                     <>
                                         <Category
@@ -829,6 +1135,7 @@ const PosMainPage = (props) => {
                                     <AssistanceCategory
                                         setAssistanceCategory={setAssistanceCategory}
                                         selectedOption={selectedOption}
+                                        assistanceCategoryId={assistanceCategoryId}
                                     />
                                 )}
                             </div>
@@ -849,6 +1156,8 @@ const PosMainPage = (props) => {
                                 />
                             ) : (
                                 <Assistance
+                                    isAssistanceInCart={isAssistanceInCart}
+                                    posAllAssistances={posAllAssistances}
                                     cartProducts={updateProducts}
                                     updateCart={addToCarts}
                                     customCart={customCart}
@@ -859,7 +1168,25 @@ const PosMainPage = (props) => {
                                     onScrollCallAPI={onScrollCallAPI}
                                     page={page}
                                     setPage={setPage}
+                                    addAssistanceToCart={addAssistanceToCart}
                                 />
+                                // <Assistance
+
+
+                                //     isAssistanceInCart={isAssistanceInCart}
+                                //     posAllAssistances={posAllAssistances}
+                                //     cartProducts={updateProducts}
+                                //     updateCart={addToCarts}
+                                //     customCart={customCart}
+                                //     setCartAssistanceIds={setCartAssistanceIds}
+                                //     cartAssistanceIds={cartAssistanceIds}
+                                //     settings={settings}
+                                //     selectedOption={selectedOption}
+                                //     onScrollCallAPI={onScrollCallAPI}
+                                //     page={page}
+                                //     setPage={setPage}
+                                //     addAssistanceToCart={addAssistanceToCart}
+                                // />
                             )}
                         </div>
                     </div>
@@ -953,7 +1280,7 @@ const PosMainPage = (props) => {
 const mapStateToProps = (state) => {
     const {
         posAllProducts,
-        posAllAssistances, // Nueva prop del reducer
+        posAllAssistances,
         frontSetting,
         settings,
         cashPayment,
@@ -962,14 +1289,15 @@ const mapStateToProps = (state) => {
         holdListData,
         taxes
     } = state;
+
     return {
         holdListData,
-        posAllProducts,
-        posAllAssistances, // Agregar assistances al estado
+        posAllProducts: posAllProducts || [],
+        posAllAssistances: posAllAssistances || [],
         frontSetting,
         settings,
         paymentDetails: cashPayment,
-        customCart: prepareCartArray(posAllProducts),
+        customCart: prepareCartArray(posAllProducts || []),
         allConfigData,
         posAllTodaySaleOverAllReport,
         taxes
@@ -984,6 +1312,6 @@ export default connect(mapStateToProps, {
     posSearchCodeProduct,
     posAllProduct,
     fetchBrandClickable,
-    fetchAssistanceClickable, // Nueva acción
+    fetchAssistanceClickable,
     fetchHoldLists,
 })(PosMainPage);

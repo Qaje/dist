@@ -1,7 +1,14 @@
-export const subTotalCount = (cartItem) => {
-    const totalAmount = taxAmount(cartItem) + amountBeforeTax(cartItem);
-    return Number(+totalAmount * cartItem.quantity).toFixed(2);
-}
+
+const subTotalCount = (item) => {
+    if (!item) return 0;
+
+    const baseAmount = amountBeforeTax(item);
+    const taxAmount = taxAmountMultiply(item);
+    const discountAmount = discountAmountMultiply(item);
+    const quantity = Number(item.quantity || 1);
+
+    return ((baseAmount + taxAmount - discountAmount) * quantity);
+};
 
 export const discountAmount = (cartItem) => {
     if (cartItem.discount_type === '1' || cartItem.discount_type === 1) {
@@ -12,10 +19,20 @@ export const discountAmount = (cartItem) => {
     return +cartItem.discount_amount.toFixed(2);
 };
 
-export const discountAmountMultiply = (cartItem) => {
-    let discountMultiply = discountAmount(cartItem);
-    return (+discountMultiply * cartItem.quantity).toFixed(2);
-}
+const discountAmountMultiply = (item) => {
+    if (!item) return 0;
+
+    const baseAmount = amountBeforeTax(item);
+    const discountValue = Number(item.discount_value || 0);
+    const discountType = item.discount_type || '1';
+
+    if (discountType === '1') { // Porcentaje
+        return (baseAmount * discountValue) / 100;
+    } else { // Fijo
+        return discountValue;
+    }
+};
+
 
 export const taxAmount = (cartItem) => {
     if (cartItem.tax_type === '2' || cartItem.tax_type === 2) {
@@ -27,18 +44,25 @@ export const taxAmount = (cartItem) => {
     return +cartItem.tax_amount.toFixed(2);
 }
 
-export const taxAmountMultiply = (cartItem) => {
-    let taxMultiply = taxAmount(cartItem);
-    return (+taxMultiply * cartItem.quantity).toFixed(2);
-}
+const taxAmountMultiply = (item) => {
+    if (!item) return 0;
 
-export const amountBeforeTax = (cartItem) => {
-    let price = +cartItem.fix_net_unit;
-    const unitCost = +price - discountAmount(cartItem);
-    const inclusiveTax = +unitCost - taxAmount(cartItem);
-    let finalCalPrice = cartItem.tax_type === '1' || cartItem.tax_type === 1 ? +unitCost : +inclusiveTax;
-    return +finalCalPrice.toFixed(2);
-}
+    const baseAmount = amountBeforeTax(item);
+    const taxValue = Number(item.tax_value || 0);
+
+    return (baseAmount * taxValue) / 100;
+};
+
+const amountBeforeTax = (item) => {
+    if (!item) return 0;
+
+    const isAssistance = item.item_type === 'assistance';
+    const basePrice = isAssistance ?
+        (item.asistence_price || item.price || 0) :
+        (item.product_price || item.price || 0);
+
+    return Number(basePrice) || 0;
+};
 
 //Grand Total Calculation
 export const calculateCartTotalTaxAmount = (carts, inputValue) => {

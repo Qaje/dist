@@ -64,7 +64,9 @@ export const userMenu = [
         is_submenu: "true",
         permission: Permissions.MANAGE_ASISTENCES,
         subPath: {
-            productsSubPath: "/user/assistances",
+            assistancesSubPath: "/user/assistances",
+            assistanceCategoriesSubPath: "/user/assistances-category"
+
         },
         subMenu: [
             {

@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { fetchLanguages } from '../../store/action/languageAction';
 import LanguageLayout from './LanguageLayout';
 import { fetchFrontCms } from '../../store/action/frontCmsAction';
+import { setLoading } from '../../store/action/loadingAction';
 
 const ForgotPassword = () => {
     const { loginUser, frontCms } = useSelector(state => state)
@@ -94,7 +95,7 @@ const ForgotPassword = () => {
 
     return (
         <div className="content d-flex flex-column flex-column-fluid position-relative" style={{ backgroundImage: "url(/assets/images/asked-bg.png)" }}>
-            <LanguageLayout/>
+            <LanguageLayout />
             <div className='d-flex flex-column flex-column-fluid align-items-center justify-content-center margin-top p-4'>
                 <TabTitle title='Forgot Password' />
                 <div className="col-12 text-center align-items-center justify-content-center">

@@ -198,7 +198,7 @@ const PaymentButton = (props) => {
             });
             setTimeout(() => {
                 setUpdateHoldList(true);
-            },500)
+            }, 500)
         }
     };
 

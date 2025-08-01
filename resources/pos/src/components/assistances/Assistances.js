@@ -3,6 +3,7 @@ import { connect } from "react-redux";
 import MasterLayout from "../MasterLayout";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
 import { fetchAssistances } from "../../store/action/asistancesAction";
+import { fetchAssistanceCategories } from "../../store/action/assistanceCategoriesAction";
 import ReactDataTable from "../../shared/table/ReactDataTable";
 import DeleteAssistance from "./DeleteAssistances";
 import CreateAssistance from "./CreateAssistances";
@@ -13,11 +14,14 @@ import ActionButton from "../../shared/action-buttons/ActionButton";
 import ErrorBoundary from "../../shared/components/ErrorBoundary";
 import { useNavigate } from 'react-router-dom';
 import moment from "moment";
+import { fill, filter } from "lodash";
 
 
 const Assistances = ({
     fetchAssistances,
+    fetchAssistanceCategories,
     asistances = [],
+    categories = [], // Agregado
     totalRecord,
     isLoading,
     isCallFetchDataApi,
@@ -40,10 +44,25 @@ const Assistances = ({
         }
     }, [fetchAssistances]);
 
+    // Función para cargar categorías
+    const loadCategories = useCallback(async (filter = {}) => {
+        try {
+            console.log('Cargando categorías...');
+            await fetchAssistanceCategories(filter, true);
+            console.log('Categorías cargadas exitosamente');
+        } catch (error) {
+            console.error('Error al cargar categorias:', error);
+        }
+    }, [fetchAssistanceCategories]);
+
     // Cargar datos iniciales
     useEffect(() => {
         loadAssistances({});
     }, [loadAssistances]);
+
+    useEffect(() => {
+        loadCategories({});
+    }, [loadCategories]);
 
     // Recargar cuando sea necesario
     useEffect(() => {
@@ -98,8 +117,24 @@ const Assistances = ({
 
     // Debug: Log de datos recibidos
     console.log('Datos de asistencias en componente:', asistances);
+    console.log('Datos de categorías en componente:', categories);
     console.log('Total de registros:', totalRecord);
     console.log('Estado de carga:', isLoading);
+
+    // Función para obtener el nombre de la categoría
+    const getCategoryName = (categoryId) => {
+        if (!categoryId || !categories || categories.length === 0) {
+            return 'Sin categoría';
+        }
+
+        const category = categories.find(cat =>
+            cat.id === categoryId ||
+            cat.id === parseInt(categoryId) ||
+            (cat.attributes && cat.attributes.id === categoryId)
+        );
+
+        return category ? (category.name || category.attributes?.name || 'Sin nombre') : 'Sin categoría';
+    };
 
     // Procesamiento seguro de los datos
     const itemsValue = (asistances || []).map((assistance) => {
@@ -108,7 +143,7 @@ const Assistances = ({
             id: assistance.id,
             name: assistance.name || 'N/A',
             code: assistance.code || 'N/A',
-            category: assistance.category || 'N/A',
+            category: getCategoryName(assistance.asistence_category_id || assistance.category_id),
             asistence_cost: formattedPrice(assistance.asistence_cost || 0),
             asistence_price: formattedPrice(assistance.asistence_price || 0),
             asistence_unit: assistance.asistence_unit || 'N/A',
@@ -154,6 +189,11 @@ const Assistances = ({
             selector: (row) => row.category,
             sortField: "category",
             sortable: true,
+            cell: (row) => (
+                <span className="badge bg-light-primary">
+                    {row.category}
+                </span>
+            )
         },
         {
             name: 'Costo',
@@ -242,6 +282,7 @@ const Assistances = ({
                     AddButton={
                         <CreateAssistance
                             onSubmitSuccess={handleSubmitSuccess}
+                            categories={categories} // ✅ Pasamos las categorías
                         />
                     }
                     title={getFormattedMessage('assistances.title')}
@@ -254,6 +295,7 @@ const Assistances = ({
                     handleClose={handleClose}
                     show={editModel}
                     assistance={assistance}
+                    categories={categories} // ✅ También pasamos categorías para editar
                     onSubmitSuccess={handleSubmitSuccess}
                 />
 
@@ -270,8 +312,11 @@ const Assistances = ({
 const mapStateToProps = (state) => {
     console.log('🗺️ mapStateToProps - Estado completo:', state);
     console.log('🗺️ mapStateToProps - Estado de asistencias:', state.asistances);
+    console.log('🗺️ mapStateToProps - Estado de categorías:', state.assistanceCategory); // ✅ Cambiado a singular
+
     console.log('🗺️ mapStateToProps - Datos extraídos:', {
         asistances: state.asistances?.data || [],
+        categories: state.assistanceCategory?.data || [], // ✅ Cambiado a singular
         totalRecord: state.asistances?.meta?.total || 0,
         isLoading: state.asistances?.loading || false,
     });
@@ -281,8 +326,13 @@ const mapStateToProps = (state) => {
         console.warn('⚠️ state.asistances no existe. Nombres de estado disponibles:', Object.keys(state));
     }
 
+    if (!state.assistanceCategory) { // ✅ Cambiado a singular
+        console.warn('⚠️ state.assistanceCategory no existe. Verificar reducer.');
+    }
+
     return {
         asistances: state.asistances?.data || [],
+        categories: state.assistanceCategory?.data || [], // ✅ Cambiado a singular
         totalRecord: state.asistances?.meta?.total || 0,
         isLoading: state.asistances?.loading || false,
         allConfigData: state.allConfigData || {},
@@ -290,5 +340,7 @@ const mapStateToProps = (state) => {
     };
 };
 
-export default connect(mapStateToProps, { fetchAssistances })(Assistances);
-
+export default connect(mapStateToProps, {
+    fetchAssistances,
+    fetchAssistanceCategories // ✅ Agregado
+})(Assistances);

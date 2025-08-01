@@ -151,28 +151,47 @@ const ProductModal = (props) => {
         e.preventDefault();
         const valid = handleValidation();
         if (valid) {
-            const newProduct = product;
-            newProduct.product_price = Number(netUnit);
-            newProduct.fix_net_unit = Number(netUnit);
-            newProduct.net_unit_price = amountBeforeTax(product);
+            const newProduct = { ...product }; // Crear copia para evitar mutaciones
+
+            // Verificar si es una asistencia o un producto
+            const isAssistance = newProduct.item_type === 'assistance';
+
+            if (isAssistance) {
+                // Para asistencias - usar campos específicos de asistencias
+                newProduct.asistence_price = Number(netUnit);
+                newProduct.price = Number(netUnit); // Campo alternativo para compatibilidad
+                newProduct.fix_net_unit = Number(netUnit);
+                newProduct.net_unit_price = amountBeforeTax(newProduct);
+            } else {
+                // Para productos - usar campos tradicionales
+                newProduct.product_price = Number(netUnit);
+                newProduct.fix_net_unit = Number(netUnit);
+                newProduct.net_unit_price = amountBeforeTax(newProduct);
+            }
+
+            // Campos comunes para ambos tipos
             newProduct.tax_type = taxType.value.toString();
             newProduct.tax_value = Number(taxValue);
-            newProduct.tax_amount = taxAmountMultiply(product);
+            newProduct.tax_amount = taxAmountMultiply(newProduct);
             newProduct.discount_type = discountType.value.toString();
             newProduct.discount_value = Number(discountValue);
-            newProduct.discount_amount = discountAmountMultiply(product);
-            newProduct.sub_total = subTotalCount(product);
+            newProduct.discount_amount = discountAmountMultiply(newProduct);
+            newProduct.sub_total = subTotalCount(newProduct);
+
             if (productUnit) {
                 newProduct.sale_unit = productUnit.value ? productUnit.value : productUnit;
             }
+
             onProductUpdateInCart(newProduct);
             setIsShowModal(false);
-            setErrors('')
-            updateCost(newProduct.net_unit_price = amountBeforeTax(product))
-            updateTax(newProduct.tax_value = taxValue)
-            updateDiscount(newProduct.discount_value = discountValue)
-            updateSaleUnit(newProduct.sale_unit = productUnit.value ? productUnit.value : productUnit)
-            updateSubTotal(subTotalCount(product))
+            setErrors('');
+
+            // Actualizar los valores en el estado
+            updateCost(newProduct.net_unit_price = amountBeforeTax(newProduct));
+            updateTax(newProduct.tax_value = taxValue);
+            updateDiscount(newProduct.discount_value = discountValue);
+            updateSaleUnit(newProduct.sale_unit = productUnit.value ? productUnit.value : productUnit);
+            updateSubTotal(subTotalCount(newProduct));
         }
     };
 

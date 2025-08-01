@@ -51,7 +51,7 @@ const ProductCartList = (props) => {
             setUpdateProducts((updateProducts) =>
                 updateProducts.map((item) =>
                     item.id === singleProduct.id &&
-                    (isAssistance ? item.item_type === 'assistance' : !item.item_type)
+                        (isAssistance ? item.item_type === 'assistance' : !item.item_type)
                         ? { ...item, quantity: item.quantity - 1 }
                         : item
                 )
@@ -66,9 +66,9 @@ const ProductCartList = (props) => {
     // Calcular precio según el tipo
     const getItemPrice = () => {
         if (isAssistance) {
-            return singleProduct.attributes?.price || singleProduct.price || 0;
+            return Number(singleProduct.attributes?.price ?? singleProduct.price ?? 0);
         } else {
-            return calculateProductCost(singleProduct).toFixed(2);
+            return Number(calculateProductCost(singleProduct).toFixed(2) ?? 0);
         }
     };
 
@@ -90,11 +90,13 @@ const ProductCartList = (props) => {
         <tr>
             <td className="py-2">
                 <div className="d-flex align-items-center">
-                    {isAssistance && (
-                        <span className="badge bg-info me-2 fs-8">
-                            {getFormattedMessage("assistance.label")}
-                        </span>
-                    )}
+                    {isAssistance
+                        // && (
+                        // <span className="badge bg-info me-2 fs-8">
+                        //     {getFormattedMessage("assistance.label")}
+                        // </span>
+                        // )
+                    }
                     <div>
                         <h6 className="mb-0 fs-6">
                             {singleProduct.attributes?.name || singleProduct.name}
@@ -142,12 +144,12 @@ const ProductCartList = (props) => {
             </td>
             <td className="py-2">
                 <span className="fw-bold">
-                    {getCurrencySymbol()}{getItemPrice()}
+                    { }{getItemPrice()}
                 </span>
             </td>
             <td className="py-2">
                 <span className="fw-bold text-primary">
-                    {getCurrencySymbol()}{getSubTotal()}
+                    { }{getSubTotal()}
                 </span>
             </td>
             <td className="py-2 text-end">

@@ -242,5 +242,6 @@ export default combineReducers({
     posAllAssistances: posAllAssistanceReducer,
     //assistanceCategories: assistanceCategoryReducer,
     assistanceCategory: assistanceCategoryReducer, // ✅ AGREGAR ESTA LÍNEA
+    //asistances: asistancesReducer,
 
 });

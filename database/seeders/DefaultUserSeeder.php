@@ -69,6 +69,22 @@ class DefaultUserSeeder extends Seeder
         $store->update(['tenant_id' => $tenant->id]);
         $user->update(['tenant_id' => $tenant->id]);
 
+        //usertTest
+        $userTest = [
+            'first_name' => 'test',
+            'last_name' => 'test',
+            'email' => 'test@infy-pos.com',
+            'phone' => '919999999999',
+            'email_verified_at' => Carbon::now(),
+            'password' => Hash::make('123456'),
+            'tenant_id' => null,
+        ];
+
+        $userTest = User::create($userTest);
+        $userTest->assignRole(ModelsRole::ADMIN);
+
+
+
         // Currency
         $currency = Currency::create([
             'name' => 'India',

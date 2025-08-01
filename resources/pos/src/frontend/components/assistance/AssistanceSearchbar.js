@@ -1,64 +1,72 @@
-import React, { useState, useEffect } from "react";
-import { InputGroup, Form } from "react-bootstrap-v5";
+import React, { useState, useRef } from "react";
+import { InputGroup, FormControl, Button } from "react-bootstrap-v5";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { getFormattedMessage } from "../../../shared/sharedMethod";
 
-const AssistanceSearchbar = (props) => {
-    const {
-        customCart,
-        setUpdateProducts,
-        updateProducts,
-        selectedOption,
-        onSearchAssistance,
-        settings,
-    } = props;
-    const [searchValue, setSearchValue] = useState("");
+const AssistanceSearchbar = ({
+    onSearchAssistance,
+    settings
+}) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const inputRef = useRef();
 
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (searchValue.trim()) {
-                onSearchAssistance(searchValue);
-            } else {
-                onSearchAssistance("");
-            }
-        }, 500); // Debounce search
-
-        return () => clearTimeout(timeoutId);
-    }, [searchValue, onSearchAssistance]);
-
-    const onChangeAssistanceSearch = (e) => {
-        setSearchValue(e.target.value);
+    const handleSearch = (e) => {
+        e.preventDefault();
+        if (onSearchAssistance) {
+            onSearchAssistance(searchTerm.trim());
+        }
     };
 
-    const clearSearch = () => {
-        setSearchValue("");
-        onSearchAssistance("");
+    const handleClear = () => {
+        setSearchTerm("");
+        if (onSearchAssistance) {
+            onSearchAssistance("");
+        }
+        inputRef.current?.focus();
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleSearch(e);
+        }
     };
 
     return (
-        <div className="assistance-search-block me-3 w-100">
-            <InputGroup className="flex-nowrap">
-                <InputGroup.Text id="addon-wrapping">
-                    <FontAwesomeIcon icon={faSearch} />
-                </InputGroup.Text>
-                <Form.Control
-                    placeholder={getFormattedMessage("pos.search-assistance.title")}
-                    aria-label="Search Assistance"
-                    aria-describedby="addon-wrapping"
-                    value={searchValue}
-                    onChange={onChangeAssistanceSearch}
-                />
-                {searchValue && (
-                    <InputGroup.Text
-                        id="clear-search"
-                        style={{ cursor: 'pointer' }}
-                        onClick={clearSearch}
+        <div className="search-box me-2 mb-2 mb-sm-0">
+            <form onSubmit={handleSearch}>
+                <InputGroup>
+                    <FormControl
+                        ref={inputRef}
+                        type="text"
+                        placeholder={getFormattedMessage("Buscar servicios...") || "Buscar servicios..."}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        className="form-control"
+                        style={{ minWidth: '200px' }}
+                    />
+
+                    {searchTerm && (
+                        <Button
+                            variant="outline-secondary"
+                            onClick={handleClear}
+                            type="button"
+                            title="Limpiar búsqueda"
+                        >
+                            <FontAwesomeIcon icon={faTimes} />
+                        </Button>
+                    )}
+
+                    <Button
+                        variant="primary"
+                        type="submit"
+                        title="Buscar"
                     >
-                        ×
-                    </InputGroup.Text>
-                )}
-            </InputGroup>
+                        <FontAwesomeIcon icon={faSearch} />
+                    </Button>
+                </InputGroup>
+            </form>
         </div>
     );
 };
