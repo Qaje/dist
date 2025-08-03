@@ -1,20 +1,38 @@
-import React, { useState, createRef } from 'react';
+import React, { useState, createRef, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Form, Modal } from 'react-bootstrap-v5';
 import { getFormattedMessage, placeholderText } from "../../shared/sharedMethod";
 import { addAssistance, editAssistance } from '../../store/action/asistancesAction';
+import { fetchUnits } from "../../store/action/unitsAction";
 import ModelFooter from '../../shared/components/modelFooter';
 
 const AssistanceForm = (props) => {
-    const { handleClose, show, title, addAssistanceData, editAssistance, singleAssistance } = props;
+    const {
+        handleClose,
+        show,
+        title,
+        addAssistanceData,
+        editAssistance,
+        singleAssistance,
+        categories = [],
+        saleUnits = [],
+        fetchUnits,
+        isLoadingSaleUnits = false
+    } = props;
+
     const innerRef = createRef();
 
     const [assistance, setAssistance] = useState({
         name: singleAssistance ? singleAssistance.name : '',
         code: singleAssistance ? singleAssistance.code : '',
-        category: singleAssistance ? singleAssistance.category : '',
+        asistence_category_id: singleAssistance ? singleAssistance.asistence_category_id : '',
+        asistence_cost: singleAssistance ? singleAssistance.asistence_cost : '',
         asistence_price: singleAssistance ? singleAssistance.asistence_price : '',
+        asistence_unit: singleAssistance ? singleAssistance.asistence_unit : '',
+        sale_unit: singleAssistance ? singleAssistance.sale_unit : '', // Nuevo campo
         estimated_duration: singleAssistance ? singleAssistance.estimated_duration : '',
+        order_tax: singleAssistance ? singleAssistance.order_tax : '',
+        tax_type: singleAssistance ? singleAssistance.tax_type : '1',
         description: singleAssistance ? singleAssistance.description : '',
         notes: singleAssistance ? singleAssistance.notes : '',
         is_active: singleAssistance ? singleAssistance.is_active : true
@@ -23,8 +41,17 @@ const AssistanceForm = (props) => {
     const [errors, setErrors] = useState({
         name: '',
         code: '',
+        asistence_category_id: '',
         asistence_price: ''
     });
+
+    // Cargar sale units cuando se abre el modal
+    useEffect(() => {
+        if (show && saleUnits.length === 0) {
+            console.log('🔄 Cargando sale units...');
+            fetchUnits();
+        }
+    }, [show, saleUnits.length, fetchUnits]);
 
     const handleValidation = () => {
         let newErrors = {};
@@ -37,6 +64,11 @@ const AssistanceForm = (props) => {
 
         if (!assistance.code.trim()) {
             newErrors.code = getFormattedMessage("globally.code.validate.label");
+            isValid = false;
+        }
+
+        if (!assistance.asistence_category_id) {
+            newErrors.asistence_category_id = "Selecciona una categoría";
             isValid = false;
         }
 
@@ -61,16 +93,24 @@ const AssistanceForm = (props) => {
     };
 
     const prepareFormData = () => {
-        return {
-            data: {
-                type: 'assistances',
-                attributes: {
-                    ...assistance,
-                    asistence_price: parseFloat(assistance.asistence_price),
-                    estimated_duration: parseInt(assistance.estimated_duration) || 0
-                }
-            }
+        const formData = {
+            name: assistance.name.trim(),
+            code: assistance.code.trim(),
+            asistence_category_id: parseInt(assistance.asistence_category_id) || null,
+            asistence_cost: parseFloat(assistance.asistence_cost) || 0,
+            asistence_price: parseFloat(assistance.asistence_price) || 0,
+            asistence_unit: assistance.asistence_unit?.trim() || '',
+            sale_unit: parseInt(assistance.sale_unit) || null, // Nuevo campo como FK
+            estimated_duration: parseInt(assistance.estimated_duration) || 0,
+            order_tax: parseFloat(assistance.order_tax) || 0,
+            tax_type: assistance.tax_type || '1',
+            description: assistance.description?.trim() || null,
+            notes: assistance.notes?.trim() || null,
+            is_active: Boolean(assistance.is_active)
         };
+
+        console.log('📦 Datos preparados para envío:', formData);
+        return formData;
     };
 
     const onSubmit = (event) => {
@@ -89,9 +129,14 @@ const AssistanceForm = (props) => {
         setAssistance({
             name: '',
             code: '',
-            category: '',
+            asistence_category_id: '',
+            asistence_cost: '',
             asistence_price: '',
+            asistence_unit: '',
+            sale_unit: '', // Limpiar nuevo campo
             estimated_duration: '',
+            order_tax: '',
+            tax_type: '1',
             description: '',
             notes: '',
             is_active: true
@@ -99,6 +144,11 @@ const AssistanceForm = (props) => {
         setErrors({});
         handleClose();
     };
+
+    // Debug logs
+    console.log('📏 Sale Units en form:', saleUnits);
+    console.log('📂 Categorías en form:', categories);
+    console.log('🔍 Assistance actual:', assistance);
 
     return (
         <Modal show={show} onHide={clearField} size="lg">
@@ -143,17 +193,70 @@ const AssistanceForm = (props) => {
                         <div className='col-md-6 mb-3'>
                             <label className='form-label'>
                                 Categoría:
+                                <span className='required' />
                             </label>
                             <select
-                                name='category'
-                                value={assistance.category}
-                                className='form-control'
+                                name='asistence_category_id'
+                                value={assistance.asistence_category_id}
+                                className={`form-control ${errors.asistence_category_id ? 'is-invalid' : ''}`}
                                 onChange={onChangeInput}
-                            ><option value="">Selecciona una categoría</option>
-                                {props.categories && props.categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.attributes?.name || cat.name}</option>
+                            >
+                                <option value="">Selecciona una categoría</option>
+                                {categories && categories.map(cat => (
+                                    <option
+                                        key={cat.id || cat.attributes?.id}
+                                        value={cat.id || cat.attributes?.id}
+                                    >
+                                        {cat.attributes?.name || cat.name}
+                                    </option>
                                 ))}
                             </select>
+                            {errors.asistence_category_id && <div className="invalid-feedback">{errors.asistence_category_id}</div>}
+                        </div>
+
+                        {/* NUEVO CAMPO: Sale Unit */}
+                        <div className='col-md-6 mb-3'>
+                            <label className='form-label'>
+                                Unidad de Venta:
+                            </label>
+                            {isLoadingSaleUnits ? (
+                                <select className="form-control" disabled>
+                                    <option>Cargando unidades...</option>
+                                </select>
+                            ) : (
+                                <select
+                                    name='sale_unit'
+                                    value={assistance.sale_unit}
+                                    className='form-control'
+                                    onChange={onChangeInput}
+                                >
+                                    <option value="">Selecciona una unidad</option>
+                                    {saleUnits && saleUnits.map(unit => (
+                                        <option key={unit.id} value={unit.id}>
+                                            {unit.name} ({unit.short_name})
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                            {saleUnits.length === 0 && !isLoadingSaleUnits && (
+                                <small className="text-muted">
+                                    No hay unidades de venta disponibles.
+                                </small>
+                            )}
+                        </div>
+
+                        <div className='col-md-6 mb-3'>
+                            <label className='form-label'>
+                                Costo:
+                            </label>
+                            <input
+                                type='number'
+                                step="0.01"
+                                name='asistence_cost'
+                                value={assistance.asistence_cost}
+                                className='form-control'
+                                onChange={onChangeInput}
+                            />
                         </div>
 
                         <div className='col-md-6 mb-3'>
@@ -163,13 +266,27 @@ const AssistanceForm = (props) => {
                             </label>
                             <input
                                 type='number'
+                                step="0.01"
                                 name='asistence_price'
                                 value={assistance.asistence_price}
-                                step="0.01"
                                 className={`form-control ${errors.asistence_price ? 'is-invalid' : ''}`}
                                 onChange={onChangeInput}
                             />
                             {errors.asistence_price && <div className="invalid-feedback">{errors.asistence_price}</div>}
+                        </div>
+
+                        <div className='col-md-6 mb-3'>
+                            <label className='form-label'>
+                                Unidad:
+                            </label>
+                            <input
+                                type='text'
+                                name='asistence_unit'
+                                value={assistance.asistence_unit}
+                                className='form-control'
+                                onChange={onChangeInput}
+                                placeholder="Ej: 1, 2, etc."
+                            />
                         </div>
 
                         <div className='col-md-6 mb-3'>
@@ -183,6 +300,35 @@ const AssistanceForm = (props) => {
                                 className='form-control'
                                 onChange={onChangeInput}
                             />
+                        </div>
+
+                        <div className='col-md-6 mb-3'>
+                            <label className='form-label'>
+                                Orden de impuestos:
+                            </label>
+                            <input
+                                type='number'
+                                step="0.01"
+                                name='order_tax'
+                                value={assistance.order_tax}
+                                className='form-control'
+                                onChange={onChangeInput}
+                            />
+                        </div>
+
+                        <div className='col-md-6 mb-3'>
+                            <label className='form-label'>
+                                Tipo de impuesto:
+                            </label>
+                            <select
+                                name='tax_type'
+                                value={assistance.tax_type}
+                                className='form-control'
+                                onChange={onChangeInput}
+                            >
+                                <option value="1">Tipo 1</option>
+                                <option value="2">Tipo 2</option>
+                            </select>
                         </div>
 
                         <div className='col-md-6 mb-3 d-flex align-items-center'>
@@ -232,11 +378,41 @@ const AssistanceForm = (props) => {
                     onEditRecord={singleAssistance}
                     onSubmit={onSubmit}
                     clearField={clearField}
-                    addDisabled={!assistance.name || !assistance.code || !assistance.asistence_price}
+                    addDisabled={!assistance.name || !assistance.code || !assistance.asistence_category_id || !assistance.asistence_price}
                 />
             </Form>
         </Modal>
     );
 };
 
-export default connect(null, { addAssistance, editAssistance })(AssistanceForm);
+// const mapStateToProps = (state) => {
+//     return {
+//         saleUnits: state.saleUnits?.data || [],
+//         isLoadingSaleUnits: state.saleUnits?.loading || false
+//     };
+// };
+const mapStateToProps = (state) => {
+    console.log('🗺️ mapStateToProps - Estado completo:', state);
+    console.log('🗺️ mapStateToProps - Units directo:', state.units);
+
+    // Tu estado de units es un array directo
+    const unitsArray = state.units || [];
+
+    console.log('🗺️ mapStateToProps - Units array:', {
+        unitsArray: unitsArray,
+        length: unitsArray.length,
+        isArray: Array.isArray(unitsArray),
+        firstItem: unitsArray[0]
+    });
+
+    return {
+        saleUnits: unitsArray, // Array directo
+        isLoadingSaleUnits: state.isLoading || false // Si tienes un estado global de loading
+    };
+};
+
+export default connect(mapStateToProps, {
+    addAssistance,
+    editAssistance,
+    fetchUnits
+})(AssistanceForm);

@@ -25,6 +25,7 @@ class AsistenceResource extends BaseJsonResource
                 'description' => $this->description,
                 'notes' => $this->notes,
                 'is_active' => $this->is_active,
+                'sale_unit' => $this->sale_unit,
                 'category' => $this->asistenceCategory ? [
                     'id' => $this->asistenceCategory->id,
                     'name' => $this->asistenceCategory->name,

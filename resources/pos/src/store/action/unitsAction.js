@@ -16,51 +16,6 @@ import { setLoading } from "./loadingAction";
 import { getFormattedMessage } from "../../shared/sharedMethod";
 import { callFetchDataApi } from "./updateBrand";
 
-export const fetchUnits =
-    (filter = {}, isLoading = true) =>
-    async (dispatch) => {
-        if (isLoading) {
-            dispatch(setLoading(true));
-        }
-        let url = apiBaseURL.UNITS;
-        if (
-            !_.isEmpty(filter) &&
-            (filter.page ||
-                filter.pageSize ||
-                filter.search ||
-                filter.order_By ||
-                filter.created_at)
-        ) {
-            url += requestParam(filter, null, null, null, url);
-        }
-        apiConfig
-            .get(url)
-            .then((response) => {
-                dispatch({
-                    type: unitsActionType.FETCH_UNITS,
-                    payload: response.data.data,
-                });
-                dispatch(
-                    setTotalRecord(
-                        response.data.meta.total !== undefined &&
-                            response.data.meta.total >= 0
-                            ? response.data.meta.total
-                            : response.data.data.total
-                    )
-                );
-                if (isLoading) {
-                    dispatch(setLoading(false));
-                }
-            })
-            .catch(({ response }) => {
-                dispatch(
-                    addToast({
-                        text: response?.data?.message,
-                        type: toastType.ERROR,
-                    })
-                );
-            });
-    };
 
 export const fetchAllunits = () => async (dispatch) => {
     apiConfig
@@ -157,4 +112,127 @@ export const deleteUnit = (unitId) => async (dispatch) => {
                 addToast({ text: response?.data?.message, type: toastType.ERROR })
             );
         });
+};
+
+export const fetchUnits = (filter = {}, isLoading = true) => async (dispatch) => {
+    console.log('🚀 fetchUnits iniciado - DEBUG VERSION');
+    console.log('📊 Parámetros:', { filter, isLoading });
+
+    try {
+        if (isLoading) {
+            console.log('⏳ Activando loading...');
+            dispatch(setLoading(true));
+        }
+
+        // Verificar configuraciones
+        console.log('🔍 Verificando configuraciones...');
+        console.log('  apiBaseURL:', typeof apiBaseURL, apiBaseURL);
+        console.log('  apiBaseURL.UNITS:', apiBaseURL?.UNITS);
+        console.log('  apiConfig:', typeof apiConfig, !!apiConfig);
+        console.log('  unitsActionType:', typeof unitsActionType, unitsActionType);
+
+        let url = apiBaseURL.UNITS;
+
+        if (!url) {
+            throw new Error('apiBaseURL.UNITS no está definido');
+        }
+
+        console.log('🌐 URL base:', url);
+
+        // Agregar filtros si existen
+        if (!_.isEmpty(filter) &&
+            (filter.page || filter.pageSize || filter.search || filter.order_By || filter.created_at)) {
+
+            console.log('🔗 Agregando parámetros al URL...');
+            const params = requestParam(filter, null, null, null, url);
+            url += params;
+            console.log('🔗 URL con parámetros:', url);
+        }
+
+        console.log('📞 Realizando llamada HTTP...');
+        const response = await apiConfig.get(url);
+
+        console.log('📥 Respuesta HTTP exitosa:', {
+            status: response.status,
+            statusText: response.statusText,
+            data: response.data
+        });
+
+        if (!response.data) {
+            throw new Error('La respuesta no contiene data');
+        }
+
+        if (!response.data.data) {
+            throw new Error('La respuesta no contiene data.data');
+        }
+
+        console.log('📦 Data extraída:', response.data.data);
+        console.log('📊 Meta extraída:', response.data.meta);
+
+        // Dispatch principal
+        console.log('📤 Despachando FETCH_UNITS...');
+        dispatch({
+            type: unitsActionType.FETCH_UNITS,
+            payload: response.data.data,
+        });
+        console.log('✅ FETCH_UNITS despachado');
+
+        // Dispatch del total
+        const total = response.data.meta?.total !== undefined && response.data.meta.total >= 0
+            ? response.data.meta.total
+            : response.data.data.length;
+
+        console.log('📊 Total calculado:', total);
+        dispatch(setTotalRecord(total));
+        console.log('✅ Total despachado');
+
+        if (isLoading) {
+            console.log('⏹️ Desactivando loading...');
+            dispatch(setLoading(false));
+        }
+
+        console.log('🎉 fetchUnits completado exitosamente');
+
+    } catch (error) {
+        console.error('💥 ERROR EN fetchUnits:');
+        console.error('  Mensaje:', error.message);
+        console.error('  Stack:', error.stack);
+        console.error('  Tipo:', error.name);
+
+        if (error.response) {
+            console.error('  Response status:', error.response.status);
+            console.error('  Response data:', error.response.data);
+            console.error('  Response headers:', error.response.headers);
+        }
+
+        if (error.request) {
+            console.error('  Request:', error.request);
+        }
+
+        console.error('  Config:', error.config);
+
+        // Toast de error si existe
+        try {
+            dispatch(
+                addToast({
+                    text: error.response?.data?.message || `Error: ${error.message}`,
+                    type: toastType.ERROR,
+                })
+            );
+        } catch (toastError) {
+            console.error('❌ Error al mostrar toast:', toastError);
+        }
+
+        // Asegurar que loading se desactive
+        if (isLoading) {
+            try {
+                dispatch(setLoading(false));
+            } catch (loadingError) {
+                console.error('❌ Error al desactivar loading:', loadingError);
+            }
+        }
+
+        // Re-throw para que el componente pueda manejarlo
+        throw error;
+    }
 };

@@ -31,6 +31,7 @@ return new class extends Migration
             $table->text('description')->nullable(); // descripción del servicio
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->unsignedBigInteger('sale_unit')->nullable();
             $table->timestamps();
 
             // $table->foreign('tenant_id')

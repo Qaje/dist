@@ -19,5 +19,6 @@ class DatabaseSeeder extends Seeder
         $this->call(DefaultUserSeeder::class);
         $this->call(DefaultSettingSeeder::class);
         $this->call(DefaultFeaturesSeeder::class);
+       // $this->call(DefaultSaleUnit::class);
     }
 }

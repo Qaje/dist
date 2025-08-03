@@ -5,25 +5,70 @@ import { connect } from 'react-redux';
 import { getFormattedMessage } from '../../shared/sharedMethod';
 import { addAssistance } from '../../store/action/asistancesAction';
 import { fetchAssistanceCategories } from '../../store/action/assistanceCategoriesAction';
+import { fetchUnits } from "../../store/action/unitsAction";
 
 const CreateAssistance = ({
     addAssistance,
     onSubmitSuccess,
     categories = [],
+    saleUnits = [],
     fetchAssistanceCategories,
-    isLoadingCategories = false
+    fetchUnits,
+    isLoadingUnits = false,
+    isLoadingCategories = false,
 }) => {
     const [show, setShow] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { register, handleSubmit, formState: { errors }, reset } = useForm();
 
-    // Cargar categorías cuando se abre el modal
+    // Debug mejorado
+    console.log('🎯 CreateAssistance - Props recibidos:', {
+        categories: {
+            length: categories?.length,
+            isArray: Array.isArray(categories),
+            firstItem: categories?.[0]
+        },
+        saleUnits: {
+            length: saleUnits?.length,
+            isArray: Array.isArray(saleUnits),
+            firstItem: saleUnits?.[0]
+        },
+        isLoadingCategories,
+        isLoadingUnits,
+        show
+    });
+
+    // useEffect mejorado con mejor manejo de errores
     useEffect(() => {
-        if (show && categories.length === 0) {
-            console.log('🔄 Cargando categorías...');
-            fetchAssistanceCategories({});
+        if (show) {
+            console.log('🚪 Modal abierto - Verificando datos...');
+
+            const loadData = async () => {
+                try {
+                    // Cargar categorías si no existen
+                    if (!categories || categories.length === 0) {
+                        console.log('🔄 Cargando categorías...');
+                        await fetchAssistanceCategories({});
+                    } else {
+                        console.log('✅ Categorías ya disponibles:', categories.length);
+                    }
+
+                    // Cargar sale units si no existen
+                    if (!saleUnits || saleUnits.length === 0) {
+                        console.log('🔄 Cargando sale units...');
+                        await fetchUnits({}, true); // Con loading = true
+                    } else {
+                        console.log('✅ Sale units ya disponibles:', saleUnits.length);
+                    }
+
+                } catch (error) {
+                    console.error('❌ Error al cargar datos en modal:', error);
+                }
+            };
+
+            loadData();
         }
-    }, [show, categories.length, fetchAssistanceCategories]);
+    }, [show, categories.length, saleUnits.length, fetchAssistanceCategories, fetchUnits]);
 
     const handleClose = () => {
         reset();
@@ -31,75 +76,85 @@ const CreateAssistance = ({
     };
 
     const handleShow = () => {
+        console.log('🚪 Abriendo modal...');
         setShow(true);
-        // Cargar categorías al abrir el modal
-        if (categories.length === 0) {
-            fetchAssistanceCategories({});
-        }
     };
 
     const onSubmit = async (data) => {
         setIsLoading(true);
         console.log('📤 Datos RAW del formulario:', data);
+
         try {
-            // Verificar que tenemos el campo name
+            // Verificar campos obligatorios
             if (!data.name || data.name.trim() === '') {
-                console.error('❌ Campo name está vacío!', data.name);
                 throw new Error('El campo name es obligatorio');
             }
 
-            // Buscar la categoría seleccionada para obtener su nombre
+            if (!data.code || data.code.trim() === '') {
+                throw new Error('El campo code es obligatorio');
+            }
+
+            if (!data.asistence_category_id) {
+                throw new Error('La categoría es obligatoria');
+            }
+
+            if (!data.asistence_price || parseFloat(data.asistence_price) <= 0) {
+                throw new Error('El precio es obligatorio y debe ser mayor a 0');
+            }
+
+            // Buscar la categoría seleccionada
             const selectedCategory = categories.find(cat =>
                 cat.id === parseInt(data.asistence_category_id) ||
                 cat.attributes?.id === parseInt(data.asistence_category_id)
             );
 
-            // Procesar los datos exactamente como los espera el backend
+            console.log('🔍 Categoría seleccionada:', selectedCategory);
+
+            // Buscar la sale unit seleccionada (si existe)
+            const selectedSaleUnit = data.sale_unit ? saleUnits.find(unit =>
+                unit.id === parseInt(data.sale_unit)
+            ) : null;
+
+            console.log('🔍 Sale unit seleccionada:', selectedSaleUnit);
+
+            // Procesar los datos
             const assistanceData = {
                 name: data.name.trim(),
-                code: data.code?.trim() || '',
-                asistence_category_id: parseInt(data.asistence_category_id) || null,
+                code: data.code.trim(),
+                asistence_category_id: parseInt(data.asistence_category_id),
                 asistence_cost: parseFloat(data.asistence_cost) || 0,
-                asistence_price: parseFloat(data.asistence_price) || 0,
+                asistence_price: parseFloat(data.asistence_price),
                 asistence_unit: data.asistence_unit?.trim() || '1',
                 estimated_duration: parseInt(data.estimated_duration) || 0,
-                order_tax: parseInt(data.order_tax) || 0,
+                order_tax: parseFloat(data.order_tax) || 0,
                 tax_type: data.tax_type || '1',
                 description: data.description?.trim() || null,
                 notes: data.notes?.trim() || null,
-                is_active: Boolean(data.is_active !== false), // true por defecto
-                // Incluir category según tu estructura
+                sale_unit: data.sale_unit ? parseInt(data.sale_unit) : null,
+                is_active: Boolean(data.is_active !== false),
+                // Incluir información de la categoría si es necesario
                 category: selectedCategory ? {
                     id: selectedCategory.id || selectedCategory.attributes?.id,
                     name: selectedCategory.name || selectedCategory.attributes?.name
                 } : null
             };
 
-            console.log('📦 Datos procesados para enviar:', assistanceData);
-            console.log('🔍 Verificación de campos requeridos:', {
-                name: { exists: !!assistanceData.name, value: assistanceData.name },
-                code: { exists: !!assistanceData.code, value: assistanceData.code },
-                category_id: { exists: !!assistanceData.asistence_category_id, value: assistanceData.asistence_category_id },
-                price: { exists: !!assistanceData.asistence_price, value: assistanceData.asistence_price }
-            });
+            console.log('📦 Datos finales para enviar:', assistanceData);
 
             await addAssistance(assistanceData);
             console.log('✅ Asistencia creada exitosamente');
 
-            onSubmitSuccess(); // Notificar al componente padre
-            handleClose(); // Cerrar el modal después de guardar
+            // Limpiar y cerrar
+            onSubmitSuccess();
+            handleClose();
 
         } catch (error) {
             console.error("❌ Error al crear asistencia:", error);
-            console.error("❌ Response data:", error.response?.data);
-            console.error("❌ Status:", error.response?.status);
+            // Aquí podrías mostrar un toast o mensaje de error al usuario
         } finally {
             setIsLoading(false);
         }
     };
-
-    // Debug: mostrar categorías disponibles
-    console.log('📂 Categorías disponibles:', categories);
 
     return (
         <>
@@ -116,6 +171,7 @@ const CreateAssistance = ({
                 <Form onSubmit={handleSubmit(onSubmit)}>
                     <Modal.Body>
                         <div className="row">
+                            {/* Nombre */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>
@@ -133,6 +189,8 @@ const CreateAssistance = ({
                                     )}
                                 </Form.Group>
                             </div>
+
+                            {/* Código */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Código *</Form.Label>
@@ -149,7 +207,7 @@ const CreateAssistance = ({
                                 </Form.Group>
                             </div>
 
-                            {/* SELECT DE CATEGORÍAS - AGREGADO */}
+                            {/* Categoría */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Categoría *</Form.Label>
@@ -163,8 +221,7 @@ const CreateAssistance = ({
                                             isInvalid={!!errors.asistence_category_id}
                                         >
                                             <option value="">Selecciona una categoría</option>
-                                            {categories.map((category) => {
-                                                // Manejar tanto estructuras normales como con attributes
+                                            {Array.isArray(categories) && categories.map((category) => {
                                                 const categoryId = category.id || category.attributes?.id;
                                                 const categoryName = category.name || category.attributes?.name;
 
@@ -181,14 +238,59 @@ const CreateAssistance = ({
                                             Selecciona una categoría
                                         </Form.Control.Feedback>
                                     )}
-                                    {categories.length === 0 && !isLoadingCategories && (
+
+                                    {/* Info de debug */}
+                                    {process.env.NODE_ENV === 'development' && (
                                         <Form.Text className="text-muted">
-                                            No hay categorías disponibles. Verifica tu conexión a la API.
+                                            Categorías: {categories?.length || 0} disponibles
+                                            {categories?.length === 0 && !isLoadingCategories && ' - Sin datos'}
                                         </Form.Text>
                                     )}
                                 </Form.Group>
                             </div>
 
+                            {/* Unidad de Venta */}
+                            <div className="col-md-6 mb-3">
+                                <Form.Group>
+                                    <Form.Label>Unidad de Venta</Form.Label>
+                                    {isLoadingUnits ? (
+                                        <Form.Control as="select" disabled>
+                                            <option>Cargando unidades...</option>
+                                        </Form.Control>
+                                    ) : (
+                                        <Form.Select
+                                            {...register('sale_unit')}
+                                            isInvalid={!!errors.sale_unit}
+                                        >
+                                            <option value="">Selecciona una unidad</option>
+                                            {Array.isArray(saleUnits) && saleUnits.map((unit) => {
+                                                console.log('🏷️ Renderizando unidad:', unit);
+                                                return (
+                                                    <option key={unit.id} value={unit.id}>
+                                                        {unit.name} ({unit.short_name})
+                                                    </option>
+                                                );
+                                            })}
+                                        </Form.Select>
+                                    )}
+                                    {errors.sale_unit && (
+                                        <Form.Control.Feedback type="invalid">
+                                            Selecciona una unidad de venta
+                                        </Form.Control.Feedback>
+                                    )}
+
+                                    {/* Info de debug */}
+                                    {process.env.NODE_ENV === 'development' && (
+                                        <Form.Text className="text-muted">
+                                            Units: {saleUnits?.length || 0} disponibles
+                                            {saleUnits?.length === 0 && !isLoadingUnits && ' - Sin datos'}
+                                            {saleUnits?.length > 0 && ` | Primera: ${saleUnits[0]?.name}`}
+                                        </Form.Text>
+                                    )}
+                                </Form.Group>
+                            </div>
+
+                            {/* Costo */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Costo</Form.Label>
@@ -206,6 +308,8 @@ const CreateAssistance = ({
                                     )}
                                 </Form.Group>
                             </div>
+
+                            {/* Precio */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Precio *</Form.Label>
@@ -223,6 +327,8 @@ const CreateAssistance = ({
                                     )}
                                 </Form.Group>
                             </div>
+
+                            {/* Resto de campos... */}
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Unidad</Form.Label>
@@ -232,6 +338,7 @@ const CreateAssistance = ({
                                     />
                                 </Form.Group>
                             </div>
+
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Duración estimada (minutos)</Form.Label>
@@ -242,16 +349,19 @@ const CreateAssistance = ({
                                     />
                                 </Form.Group>
                             </div>
+
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Orden de impuestos</Form.Label>
                                     <Form.Control
                                         type="number"
+                                        step="0.01"
                                         {...register('order_tax')}
                                         placeholder="0"
                                     />
                                 </Form.Group>
                             </div>
+
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Label>Tipo de impuesto</Form.Label>
@@ -261,6 +371,7 @@ const CreateAssistance = ({
                                     </Form.Select>
                                 </Form.Group>
                             </div>
+
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
                                     <Form.Check
@@ -271,6 +382,7 @@ const CreateAssistance = ({
                                     />
                                 </Form.Group>
                             </div>
+
                             <div className="col-12 mb-3">
                                 <Form.Group>
                                     <Form.Label>Descripción</Form.Label>
@@ -282,6 +394,7 @@ const CreateAssistance = ({
                                     />
                                 </Form.Group>
                             </div>
+
                             <div className="col-12 mb-3">
                                 <Form.Group>
                                     <Form.Label>Notas</Form.Label>
@@ -297,10 +410,10 @@ const CreateAssistance = ({
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant="secondary" onClick={handleClose}>
-                            {getFormattedMessage('Cerrar')}
+                            Cerrar
                         </Button>
                         <Button variant="primary" type="submit" disabled={isLoading}>
-                            {isLoading ? getFormattedMessage('Cargando...') : getFormattedMessage('Crear Servicio')}
+                            {isLoading ? 'Cargando...' : 'Crear Servicio'}
                         </Button>
                     </Modal.Footer>
                 </Form>
@@ -309,16 +422,27 @@ const CreateAssistance = ({
     );
 };
 
+// mapStateToProps CORREGIDO
 const mapStateToProps = (state) => {
-    console.log('🗺️ CreateAssistance mapStateToProps - Estado completo:', state);
-    console.log('🗺️ CreateAssistance mapStateToProps - assistanceCategory:', state.assistanceCategory);
+    console.log('🗺️ CreateAssistance mapStateToProps - Estado completo:', {
+        assistanceCategory: state.assistanceCategory,
+        units: state.units,
+        isLoading: state.isLoading
+    });
+
     return {
+        // Categorías desde su reducer específico
         categories: state.assistanceCategory?.data || [],
-        isLoadingCategories: state.assistanceCategory?.loading || false
+        isLoadingCategories: state.assistanceCategory?.loading || false,
+
+        // Units desde el reducer de units (array directo)
+        saleUnits: state.units || [],
+        isLoadingUnits: state.isLoading || false, // Loading global o específico
     };
 };
 
 export default connect(mapStateToProps, {
     addAssistance,
-    fetchAssistanceCategories
+    fetchAssistanceCategories,
+    fetchUnits
 })(CreateAssistance);

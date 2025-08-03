@@ -576,7 +576,7 @@ const PosMainPage = (props) => {
             };
 
             if (item.item_type === 'assistance') {
-                saleItem.assistance_id = item.id;
+                saleItem.asistence_id = item.id;
                 saleItem.price = Number(item.asistence_price || item.price || 0);
                 saleItem.original_asistence_price = item.asistence_price;
                 saleItem.original_price = item.price;
@@ -600,7 +600,7 @@ const PosMainPage = (props) => {
     const sale_items = updateProducts.map(item => {
         if (item.item_type === 'assistance') {
             return {
-                assistance_id: item.id,
+                asistence_id: item.id,
                 quantity: Number(item.quantity) || 1,
                 price: Number(item.price) || 0,
             };
@@ -620,7 +620,7 @@ const PosMainPage = (props) => {
         const sale_items = updateProducts.map(item => {
             if (item.item_type === 'assistance') {
                 return {
-                    assistance_id: item.id,
+                    asistence_id: item.id,
                     quantity: Number(item.quantity) || 1,
                     // Usar el precio correcto para asistencias
                     price: Number(item.asistence_price || item.price || 0),

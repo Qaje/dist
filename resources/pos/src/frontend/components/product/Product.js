@@ -9,6 +9,7 @@ import {
     currencySymbolHandling,
     getFormattedMessage,
 } from "../../../shared/sharedMethod";
+import { calculateProductCost } from "../../shared/SharedMethod"; // Agregar esta importación
 import { toastType } from "../../../constants";
 import Skelten from "../../../shared/components/loaders/Skelten";
 
@@ -37,15 +38,20 @@ const Product = (props) => {
     const dispatch = useDispatch();
 
     useEffect(() => {
+        console.log('📊 Cart products updated:', cartProducts);
         // update cart while cart is updated
-        cartProducts && setUpdateProducts(cartProducts);
-        const ids = updateProducts.map((item) => {
-            return item.id;
-        });
-        setCartProductIds(ids);
-    }, [updateProducts, cartProducts]);
+        if (cartProducts) {
+            setUpdateProducts(cartProducts);
+            const ids = cartProducts.map((item) => {
+                return item.id;
+            });
+            setCartProductIds(ids);
+        }
+    }, [cartProducts]);
 
     const addToCart = (product) => {
+        console.log('🔄 addToCart called with:', product);
+
         if (product.attributes.stock.quantity > 0.0) {
             if (settings?.attributes?.enable_pos_click_audio === 'true' && clickAudioRef.current) {
                 clickAudioRef.current.play().catch((e) => {
@@ -54,6 +60,7 @@ const Product = (props) => {
             }
             addProductToCart(product);
         } else {
+            console.log('❌ Product out of stock');
             dispatch(
                 addToast({
                     text: getFormattedMessage(
@@ -108,94 +115,57 @@ const Product = (props) => {
         setLoadingMore(false);
     }, [posAllProducts]);
 
+    // Efecto separado para actualizar los IDs cuando updateProducts cambie
+    useEffect(() => {
+        const ids = updateProducts.map((item) => {
+            return item.id;
+        });
+        setCartProductIds(ids);
+        console.log('🆔 Updated cart product IDs:', ids);
+    }, [updateProducts]);
+
     const addProductToCart = (product) => {
+        console.log('🛒 Adding product to cart:', product);
+
         const existingCart = [...updateProducts];
         const productInCart = existingCart.find(
             item => item.id === product.id && (item.item_type !== 'assistance')
         );
 
         if (productInCart) {
+            console.log('✅ Product exists in cart, incrementing quantity');
             productInCart.quantity = (productInCart.quantity || 1) + 1;
         } else {
+            console.log('🆕 Adding new product to cart');
+            const productPrice = product.attributes?.product_price ||
+                product.product_price ||
+                product.attributes?.price ||
+                product.price ||
+                calculateProductCost(product) ||
+                0;
+
             const preparedProduct = {
                 ...product,
-                item_type: 'product', // Asegurar tipo
+                item_type: 'product',
                 quantity: 1,
-                // Asegurar que tenga precio
-                product_price: product.product_price ||
-                    product.price ||
-                    product.attributes?.price ||
-                    calculateProductCost(product) ||
-                    0,
-                price: product.product_price ||
-                    product.price ||
-                    product.attributes?.price ||
-                    calculateProductCost(product) ||
-                    0
+                product_price: productPrice,
+                price: productPrice,
+                // Asegurar que tenga nombre para mostrar en el carrito
+                name: product.attributes?.name || product.name || 'Producto sin nombre'
             };
+
+            console.log('📦 Prepared product:', preparedProduct);
             existingCart.push(preparedProduct);
         }
 
+        console.log('🛍️ Updated cart:', existingCart);
         setUpdateProducts(existingCart);
+
+        // Llamar a updateCart del padre para asegurar que se actualice
+        if (updateCart) {
+            updateCart(existingCart);
+        }
     };
-    // const addProductToCart = (product) => {
-    //     const newId = posAllProducts
-    //         .filter((item) => item.id === product.id)
-    //         .map((item) => item.id);
-    //     const finalIdArrays = customCart.map((id) => id.product_id);
-    //     const finalId = finalIdArrays.filter(
-    //         (finalIdArray) => finalIdArray === newId[0]
-    //     );
-    //     const pushArray = [...customCart];
-    //     const newProduct = pushArray.find(
-    //         (element) => element.id === finalId[0]
-    //     );
-    //     const filterQty = updateProducts
-    //         .filter((item) => item.id === product.id)
-    //         .map((qty) => qty.quantity)[0];
-    //     if (
-    //         updateProducts.filter((item) => item.id === product.id).length > 0
-    //     ) {
-    //         if (filterQty >= product.attributes.stock.quantity) {
-    //             dispatch(
-    //                 addToast({
-    //                     text: getFormattedMessage(
-    //                         "pos.quantity.exceeds.quantity.available.in.stock.message"
-    //                     ),
-    //                     type: toastType.ERROR,
-    //                 })
-    //             );
-    //         } else if (product.attributes.quantity_limit && filterQty >= product.attributes.quantity_limit) {
-    //             dispatch(
-    //                 addToast({
-    //                     text: getFormattedMessage(
-    //                         "sale.product-qty.limit.validate.message"
-    //                     ),
-    //                     type: toastType.ERROR,
-    //                 })
-    //             );
-    //         } else {
-    //             setUpdateProducts((updateProducts) =>
-    //                 updateProducts.map((item) =>
-    //                     item.id === product.id
-    //                         ? {
-    //                             ...item,
-    //                             quantity:
-    //                                 product.attributes.stock.quantity >
-    //                                     item.quantity
-    //                                     ? item.quantity++ + 1
-    //                                     : null,
-    //                         }
-    //                         : { ...item, id: item.id }
-    //                 )
-    //             );
-    //             updateCart(updateProducts, {...product,warehouse_id: selectedOption.value, image: product.attributes.images.imageUrls ? product.attributes.images.imageUrls[0] : productImage });
-    //         }
-    //     } else {
-    //         setUpdateProducts((prevSelected) => [...prevSelected, {...product,warehouse_id: selectedOption.value}]);
-    //         updateCart((prevSelected) => [...prevSelected, {...newProduct,warehouse_id: selectedOption.value, image: product.attributes.images.imageUrls ? product.attributes.images.imageUrls[0] : productImage}]);
-    //     }
-    // };
 
     const isProductExistInCart = (productId) => {
         return cartProductIds.includes(productId);

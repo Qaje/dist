@@ -8,7 +8,7 @@ import productCategoryReducers from "./productCategoryReducers";
 import roleReducer from "./roleReducer";
 import permissionReducer from "./permissionReducer";
 import warehouseReducer from "./warehouseReducrs";
-import unitsReducers from "./unitsReducres";
+import unitsReducers from "./unitsReducer";
 import supplierReducer from "./supplierReducer";
 import customerReducer from "./customerReducer";
 import userReducers from "./userReducers";

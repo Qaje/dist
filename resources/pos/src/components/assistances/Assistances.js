@@ -4,6 +4,7 @@ import MasterLayout from "../MasterLayout";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
 import { fetchAssistances } from "../../store/action/asistancesAction";
 import { fetchAssistanceCategories } from "../../store/action/assistanceCategoriesAction";
+import { fetchUnits } from "../../store/action/unitsAction";
 import ReactDataTable from "../../shared/table/ReactDataTable";
 import DeleteAssistance from "./DeleteAssistances";
 import CreateAssistance from "./CreateAssistances";
@@ -14,14 +15,14 @@ import ActionButton from "../../shared/action-buttons/ActionButton";
 import ErrorBoundary from "../../shared/components/ErrorBoundary";
 import { useNavigate } from 'react-router-dom';
 import moment from "moment";
-import { fill, filter } from "lodash";
-
 
 const Assistances = ({
     fetchAssistances,
     fetchAssistanceCategories,
+    fetchUnits, // Nueva función
     asistances = [],
-    categories = [], // Agregado
+    categories = [],
+    saleUnits = [], // Nuevo prop
     totalRecord,
     isLoading,
     isCallFetchDataApi,
@@ -55,14 +56,23 @@ const Assistances = ({
         }
     }, [fetchAssistanceCategories]);
 
+    // Función para cargar sale units
+    const loadSaleUnits = useCallback(async () => {
+        try {
+            console.log('Cargando sale units...');
+            await fetchUnits();
+            console.log('Sale units cargadas exitosamente');
+        } catch (error) {
+            console.error('Error al cargar sale units:', error);
+        }
+    }, [fetchUnits]);
+
     // Cargar datos iniciales
     useEffect(() => {
         loadAssistances({});
-    }, [loadAssistances]);
-
-    useEffect(() => {
         loadCategories({});
-    }, [loadCategories]);
+        loadSaleUnits({}); // Cargar sale units
+    }, [loadAssistances, loadCategories, loadSaleUnits]);
 
     // Recargar cuando sea necesario
     useEffect(() => {
@@ -118,6 +128,7 @@ const Assistances = ({
     // Debug: Log de datos recibidos
     console.log('Datos de asistencias en componente:', asistances);
     console.log('Datos de categorías en componente:', categories);
+    console.log('Datos de sale units en componente:', saleUnits);
     console.log('Total de registros:', totalRecord);
     console.log('Estado de carga:', isLoading);
 
@@ -136,6 +147,20 @@ const Assistances = ({
         return category ? (category.name || category.attributes?.name || 'Sin nombre') : 'Sin categoría';
     };
 
+    // Función para obtener el nombre de la sale unit
+    const getSaleUnitName = (saleUnitId) => {
+        if (!saleUnitId || !saleUnits || saleUnits.length === 0) {
+            return 'Sin unidad';
+        }
+
+        const saleUnit = saleUnits.find(unit =>
+            unit.id === saleUnitId ||
+            unit.id === parseInt(saleUnitId)
+        );
+
+        return saleUnit ? `${saleUnit.name} (${saleUnit.short_name})` : 'Sin unidad';
+    };
+
     // Procesamiento seguro de los datos
     const itemsValue = (asistances || []).map((assistance) => {
         console.log('Procesando assistance:', assistance);
@@ -147,6 +172,7 @@ const Assistances = ({
             asistence_cost: formattedPrice(assistance.asistence_cost || 0),
             asistence_price: formattedPrice(assistance.asistence_price || 0),
             asistence_unit: assistance.asistence_unit || 'N/A',
+            sale_unit: getSaleUnitName(assistance.sale_unit), // Nueva columna
             estimated_duration: assistance.estimated_duration || 'N/A',
             is_active: assistance.is_active || false,
             description: assistance.description || 'N/A',
@@ -212,6 +238,18 @@ const Assistances = ({
             selector: (row) => row.asistence_unit,
             sortField: "asistence_unit",
             sortable: true,
+        },
+        // Nueva columna para Sale Unit
+        {
+            name: 'Unidad de Venta',
+            selector: (row) => row.sale_unit,
+            sortField: "sale_unit",
+            sortable: true,
+            cell: (row) => (
+                <span className="badge bg-light-success">
+                    {row.sale_unit}
+                </span>
+            )
         },
         {
             name: 'Duración',
@@ -282,7 +320,8 @@ const Assistances = ({
                     AddButton={
                         <CreateAssistance
                             onSubmitSuccess={handleSubmitSuccess}
-                            categories={categories} // ✅ Pasamos las categorías
+                            categories={categories}
+                            saleUnits={saleUnits} // Pasar sale units
                         />
                     }
                     title={getFormattedMessage('assistances.title')}
@@ -295,7 +334,8 @@ const Assistances = ({
                     handleClose={handleClose}
                     show={editModel}
                     assistance={assistance}
-                    categories={categories} // ✅ También pasamos categorías para editar
+                    categories={categories}
+                    saleUnits={saleUnits} // Pasar sale units
                     onSubmitSuccess={handleSubmitSuccess}
                 />
 
@@ -310,37 +350,49 @@ const Assistances = ({
 };
 
 const mapStateToProps = (state) => {
-    console.log('🗺️ mapStateToProps - Estado completo:', state);
-    console.log('🗺️ mapStateToProps - Estado de asistencias:', state.asistances);
-    console.log('🗺️ mapStateToProps - Estado de categorías:', state.assistanceCategory); // ✅ Cambiado a singular
-
-    console.log('🗺️ mapStateToProps - Datos extraídos:', {
-        asistances: state.asistances?.data || [],
-        categories: state.assistanceCategory?.data || [], // ✅ Cambiado a singular
-        totalRecord: state.asistances?.meta?.total || 0,
-        isLoading: state.asistances?.loading || false,
+    console.log('🗺️ Assistances mapStateToProps:', {
+        asistances: state.asistances,
+        categories: state.assistanceCategory,
+        units: state.units // Array directo
     });
-
-    // Verificar si el estado tiene la estructura correcta
-    if (!state.asistances) {
-        console.warn('⚠️ state.asistances no existe. Nombres de estado disponibles:', Object.keys(state));
-    }
-
-    if (!state.assistanceCategory) { // ✅ Cambiado a singular
-        console.warn('⚠️ state.assistanceCategory no existe. Verificar reducer.');
-    }
 
     return {
         asistances: state.asistances?.data || [],
-        categories: state.assistanceCategory?.data || [], // ✅ Cambiado a singular
+        categories: state.assistanceCategory?.data || [],
+        saleUnits: state.units || [], // Array directo
         totalRecord: state.asistances?.meta?.total || 0,
         isLoading: state.asistances?.loading || false,
         allConfigData: state.allConfigData || {},
         isCallFetchDataApi: state.isCallFetchDataApi || false
     };
 };
+// const mapStateToProps = (state) => {
+//     console.log('🗺️ mapStateToProps - Estado completo:', state);
+//     console.log('🗺️ mapStateToProps - Estado de asistencias:', state.asistances);
+//     console.log('🗺️ mapStateToProps - Estado de categorías:', state.assistanceCategory);
+//     console.log('🗺️ mapStateToProps - Estado de sale units:', state.saleUnits);
+
+//     console.log('🗺️ mapStateToProps - Datos extraídos:', {
+//         asistances: state.asistances?.data || [],
+//         categories: state.assistanceCategory?.data || [],
+//         saleUnits: state.saleUnits?.data || [], // Nuevo mapeo
+//         totalRecord: state.asistances?.meta?.total || 0,
+//         isLoading: state.asistances?.loading || false,
+//     });
+
+//     return {
+//         asistances: state.asistances?.data || [],
+//         categories: state.assistanceCategory?.data || [],
+//         saleUnits: state.saleUnits?.data || [], // Nuevo mapeo
+//         totalRecord: state.asistances?.meta?.total || 0,
+//         isLoading: state.asistances?.loading || false,
+//         allConfigData: state.allConfigData || {},
+//         isCallFetchDataApi: state.isCallFetchDataApi || false
+//     };
+// };
 
 export default connect(mapStateToProps, {
     fetchAssistances,
-    fetchAssistanceCategories // ✅ Agregado
+    fetchAssistanceCategories,
+    fetchUnits // Nueva acción
 })(Assistances);

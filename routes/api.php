@@ -176,6 +176,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::middleware('permission:manage_asistences')->group(function () {
             // Route::resource('assistances', AsistenceAPIController::class);
             Route::resource('asistences', AsistenceAPIController::class);
+            Route::resource('base-units', BaseUnitAPIController::class);
             //Route::post('asistences/{asistence}', [AsistenceAPIController::class, 'update']);
             Route::resource('asistence-categories',AsistenceCategoryController::class);
             //Route::apiResource('asistence-categories.asistences', AsistenceAPIController::class);

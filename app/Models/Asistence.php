@@ -33,6 +33,7 @@ class Asistence extends BaseModel implements HasMedia,JsonResourceful
         'tax_type',
         'description',
         'notes',
+        'sale_unit',
         'is_active',
     ];
 
@@ -85,11 +86,20 @@ class Asistence extends BaseModel implements HasMedia,JsonResourceful
             'tax_type' => $this->tax_type,
             'description' => $this->description,
             'notes' => $this->notes,
+            'sale_unit' => $this->sale_unit,
             'is_active' => $this->is_active,
         ];
 
         if( $this->relationLoaded('category')) {
             $fields['category'] = $this->category->prepareAttributes();
+        }
+
+        if( $this->relationLoaded('saleUnit') && $this->saleUnit) {
+            $fields['sale_unit_info'] = [
+                'id' => $this->saleUnit->id,
+                'name' => $this->saleUnit->name,
+                'short_name' => $this->saleUnit->short_name,
+            ];
         }
 
         return $fields;
@@ -109,6 +119,7 @@ class Asistence extends BaseModel implements HasMedia,JsonResourceful
             'tax_type' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'notes' => 'nullable|string',
+            'sale_unit' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ];
     }
