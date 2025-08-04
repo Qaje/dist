@@ -118,19 +118,19 @@ class SaleItem extends BaseModel implements JsonResourceful
     }
 
     // Accessor mejorado para sale_unit
-    public function getSaleUnitAttribute($value): array
-    {
-        if (!$value) {
-            return [];
-        }
+    // public function getSaleUnitAttribute($value): array
+    // {
+    //     if (!$value) {
+    //         return [];
+    //     }
 
-        $saleUnit = $this->unit;
-        if ($saleUnit) {
-            return $saleUnit->toArray();
-        }
+    //     $saleUnit = $this->unit;
+    //     if ($saleUnit) {
+    //         return $saleUnit->toArray();
+    //     }
 
-        return [];
-    }
+    //     return [];
+    // }
 
     // Método para obtener el precio efectivo
     public function getEffectivePriceAttribute(): float

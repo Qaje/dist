@@ -52,7 +52,10 @@ const Product = (props) => {
     const addToCart = (product) => {
         console.log('🔄 addToCart called with:', product);
 
-        if (product.attributes.stock.quantity > 0.0) {
+        // CAMBIAR: usar in_stock o stock.quantity
+        const stockQuantity = product.attributes?.in_stock || product.attributes?.stock?.quantity || 0;
+
+        if (stockQuantity > 0.0) {
             if (settings?.attributes?.enable_pos_click_audio === 'true' && clickAudioRef.current) {
                 clickAudioRef.current.play().catch((e) => {
                     console.warn("Audio play failed:", e);
@@ -125,47 +128,88 @@ const Product = (props) => {
     }, [updateProducts]);
 
     const addProductToCart = (product) => {
-        console.log('🛒 Adding product to cart:', product);
+        console.log('Adding product to cart:', product);
 
         const existingCart = [...updateProducts];
         const productInCart = existingCart.find(
-            item => item.id === product.id && (item.item_type !== 'assistance')
+            item => item.id === product.id && (!item.item_type || item.item_type === 'product')
         );
 
         if (productInCart) {
-            console.log('✅ Product exists in cart, incrementing quantity');
             productInCart.quantity = (productInCart.quantity || 1) + 1;
         } else {
-            console.log('🆕 Adding new product to cart');
-            const productPrice = product.attributes?.product_price ||
-                product.product_price ||
-                product.attributes?.price ||
-                product.price ||
-                calculateProductCost(product) ||
-                0;
-
+            // ESTRUCTURA CORREGIDA basada en tu JSON:
             const preparedProduct = {
-                ...product,
+                id: product.id,
                 item_type: 'product',
+                name: product.attributes?.name || 'Producto sin nombre',
+                code: product.attributes?.code || product.attributes?.product_code || '',
+                product_code: product.attributes?.product_code || product.attributes?.code || '',
+
+                // PRECIOS - usando los campos correctos del JSON
+                product_price: Number(product.attributes?.product_price || 0),
+                product_cost: Number(product.attributes?.product_cost || 0),
+                price: Number(product.attributes?.product_price || 0), // Campo alternativo
+
+                // UNIDADES - usando los campos correctos del JSON
+                product_unit: product.attributes?.product_unit || '1',
+                sale_unit: product.attributes?.sale_unit || '1',
+                purchase_unit: product.attributes?.purchase_unit || '1',
+
+                // STOCK
+                stock_alert: Number(product.attributes?.stock_alert || 0),
+                quantity_limit: Number(product.attributes?.quantity_limit || 0),
+                in_stock: Number(product.attributes?.in_stock || product.attributes?.stock?.quantity || 0),
+
+                // CANTIDAD INICIAL
                 quantity: 1,
-                product_price: productPrice,
-                price: productPrice,
-                // Asegurar que tenga nombre para mostrar en el carrito
-                name: product.attributes?.name || product.name || 'Producto sin nombre'
+
+                // IMPUESTOS
+                order_tax: product.attributes?.order_tax || null,
+                tax_type: product.attributes?.tax_type || '1',
+
+                // CATEGORÍA Y MARCA
+                product_category_id: product.attributes?.product_category_id,
+                brand_id: product.attributes?.brand_id,
+                product_category_name: product.attributes?.product_category_name || '',
+                brand_name: product.attributes?.brand_name || '',
+
+                // INFORMACIÓN ADICIONAL
+                notes: product.attributes?.notes || '',
+                expiry_date: product.attributes?.expiry_date || null,
+
+                // UNIDADES CON NOMBRES (del JSON)
+                product_unit_name: product.attributes?.product_unit_name,
+                sale_unit_name: product.attributes?.sale_unit_name,
+                purchase_unit_name: product.attributes?.purchase_unit_name,
+
+                // STOCK POR ALMACÉN
+                stock: product.attributes?.stock,
+                warehouse: product.attributes?.warehouse,
+
+                // CÓDIGO DE BARRAS
+                barcode_url: product.attributes?.barcode_url || '',
+                barcode_symbol: product.attributes?.barcode_symbol || 1,
+
+                // IMAGEN - CORREGIR la referencia
+                image: product.attributes?.images?.imageUrls?.[0] || productImage,
+                images: product.attributes?.images || null,
+
+                // ALMACÉN SELECCIONADO
+                warehouse_id: selectedOption?.value,
+
+                // MANTENER REFERENCIA COMPLETA
+                attributes: product.attributes,
             };
 
-            console.log('📦 Prepared product:', preparedProduct);
             existingCart.push(preparedProduct);
         }
-
-        console.log('🛍️ Updated cart:', existingCart);
         setUpdateProducts(existingCart);
-
-        // Llamar a updateCart del padre para asegurar que se actualice
-        if (updateCart) {
-            updateCart(existingCart);
-        }
+        // IMPORTANTE: Actualizar el carrito en el componente padre
+        updateCart(existingCart);
+        console.log('Cart updated with product:', existingCart);
     };
+
 
     const isProductExistInCart = (productId) => {
         return cartProductIds.includes(productId);
@@ -175,11 +219,15 @@ const Product = (props) => {
         settings?.attributes?.show_pos_stock_product === 'true'
         ? posAllProducts :
         posAllProducts.filter(
-            (product) => product?.attributes?.stock?.quantity > 0.0
+            (product) => {
+                const stockQuantity = product?.attributes?.in_stock || product?.attributes?.stock?.quantity || 0;
+                return stockQuantity > 0.0;
+            }
         );
 
     //Cart Item Array
     const loadAllProduct = (product, index) => {
+        const stockQuantity = product.attributes?.in_stock || product.attributes?.stock?.quantity || 0;
 
         return (
             <div
@@ -194,9 +242,7 @@ const Product = (props) => {
                     <Card.Img
                         variant="top"
                         src={
-                            product.attributes.images.imageUrls
-                                ? product.attributes.images.imageUrls[0]
-                                : productImage
+                            product.attributes?.images?.imageUrls?.[0] || productImage
                         }
                     />
                     <Card.Body className="px-2 pt-2 pb-1 custom-card-body d-flex flex-column justify-content-evenly">
@@ -209,11 +255,12 @@ const Product = (props) => {
                         </h6>
                         <div className="d-flex flex-wrap justify-content-between align-items-center">
                             <span className="fs-small text-gray-700 me-2">
-                                {product.attributes.code}
+                                {product.attributes?.code || product.attributes?.product_code}
                             </span>
-                            {product.attributes?.variation_product ? <span className="badge bg-light-info fs-small text-gray-700">
-                                {product.attributes?.variation_product?.variation_type_name}
-                            </span> : ''}
+                            {product.attributes?.variation_product ?
+                                <span className="badge bg-light-info fs-small text-gray-700">
+                                    {product.attributes?.variation_product?.variation_type_name}
+                                </span> : ''}
                         </div>
                         <p className="m-0 item-badges">
                             <Badge
@@ -221,9 +268,10 @@ const Product = (props) => {
                                 text="white"
                                 className="product-custom-card__card-badge"
                             >
-                                {product.attributes.stock &&
-                                    product.attributes.stock.quantity}{" "}
-                                {product?.attributes?.product_unit_name?.name}
+                                {stockQuantity}{" "}
+                                {product?.attributes?.product_unit_name?.name ||
+                                    product?.attributes?.sale_unit_name?.name ||
+                                    product?.attributes?.purchase_unit_name?.name}
                             </Badge>
                         </p>
                         <p className="m-0 item-badge">
@@ -238,7 +286,7 @@ const Product = (props) => {
                                     settings.attributes.currency_symbol,
                                     newCost
                                         ? newCost
-                                        : product.attributes.product_price
+                                        : product.attributes?.product_price
                                 )}
                             </Badge>
                         </p>

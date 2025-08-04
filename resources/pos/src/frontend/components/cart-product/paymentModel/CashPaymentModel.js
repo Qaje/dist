@@ -128,7 +128,7 @@ const CashPaymentModel = (props) => {
                                     value={Number(summation).toFixed(2)}
                                 />
                             </Form.Group>
-                            {cashPaymentValue?.payment_status?.value === 1 &&<Form.Group
+                            <Form.Group
                                 className="mb-3 col-6"
                                 controlId="formBasicType"
                             >
@@ -150,7 +150,7 @@ const CashPaymentModel = (props) => {
                                         "select.payment-type.label"
                                     )}
                                 />
-                            </Form.Group>}
+                            </Form.Group>
                             <Form.Group
                                 className="mb-3 col-12"
                                 controlId="formBasicNotes"
@@ -231,8 +231,8 @@ const CashPaymentModel = (props) => {
                                                 {currencySymbolHandling(
                                                     allConfigData,
                                                     settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
+                                                    settings.attributes
+                                                        .currency_symbol,
                                                     subTotal ? subTotal : "0.00"
                                                 )}
                                             </td>
@@ -247,15 +247,15 @@ const CashPaymentModel = (props) => {
                                                 {currencySymbolHandling(
                                                     allConfigData,
                                                     settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
+                                                    settings.attributes
+                                                        .currency_symbol,
                                                     taxTotal ? taxTotal : "0.00"
                                                 )}{" "}
                                                 (
                                                 {cartItemValue.tax
                                                     ? parseFloat(
-                                                          cartItemValue.tax
-                                                      ).toFixed(2)
+                                                        cartItemValue.tax
+                                                    ).toFixed(2)
                                                     : "0.00"}{" "}
                                                 %)
                                             </td>
@@ -270,8 +270,8 @@ const CashPaymentModel = (props) => {
                                                 {currencySymbolHandling(
                                                     allConfigData,
                                                     settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
+                                                    settings.attributes
+                                                        .currency_symbol,
                                                     cartItemValue.discount
                                                         ? cartItemValue.discount
                                                         : "0.00"
@@ -288,8 +288,8 @@ const CashPaymentModel = (props) => {
                                                 {currencySymbolHandling(
                                                     allConfigData,
                                                     settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
+                                                    settings.attributes
+                                                        .currency_symbol,
                                                     cartItemValue.shipping
                                                         ? cartItemValue.shipping
                                                         : "0.00"
@@ -306,8 +306,8 @@ const CashPaymentModel = (props) => {
                                                 {currencySymbolHandling(
                                                     allConfigData,
                                                     settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
+                                                    settings.attributes
+                                                        .currency_symbol,
                                                     grandTotal
                                                 )}
                                             </td>
@@ -365,10 +365,10 @@ const CashPaymentModel = (props) => {
                                     })
                                 );
                             } else {
-                                onCashPayment(event,true);
+                                onCashPayment(event, true);
                             }
                         } else {
-                            onCashPayment(event,true);
+                            onCashPayment(event, true);
                         }
                     }}
                 >

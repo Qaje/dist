@@ -162,7 +162,8 @@ class SaleAPIController extends AppBaseController
             \Log::info('All validations passed, proceeding with sale creation');
 
             // ✅ VERIFICAR: Datos obligatorios para crear la venta
-            $requiredFields = ['warehouse_id', 'grand_total', 'payment_type', 'payment_status', 'status'];
+//            $requiredFields = ['warehouse_id', 'grand_total', 'payment_type', 'payment_status', 'status'];
+            $requiredFields = ['warehouse_id', 'grand_total', 'payment_status', 'status'];
             foreach ($requiredFields as $field) {
                 if (!isset($request->$field)) {
                     \Log::error("Missing required field: {$field}");
@@ -203,7 +204,7 @@ class SaleAPIController extends AppBaseController
                     $productItem['discount_type'] = $item['discount_type'] ?? 1;
                     $productItem['discount_value'] = $item['discount_value'] ?? 0;
                     $productItem['discount_amount'] = $item['discount_amount'] ?? 0;
-                    $productItem['sale_unit'] = is_numeric($item['sale_unit'] ?? 0);
+                    $productItem['sale_unit'] = $item['sale_unit'] ?? 1;
                     // $productItem['sale_unit'] = is_numeric($item['sale_unit'] ?? null) ?
                     //     ($item['sale_unit'] ?? 1) : 1; // ✅ Asegurar que sea numérico
 

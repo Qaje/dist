@@ -263,56 +263,75 @@ class SaleRepository extends BaseRepository
     /**
      * @return mixed
      */
+
     public function storeSaleItems($sale, $input)
-    {
-        foreach ($input['sale_items'] as $saleItem) {
-            $product = Product::whereId($saleItem['product_id'])->first();
+{
+    foreach ($input['sale_items'] as $saleItem) {
+        $product = Product::whereId($saleItem['product_id'])->first();
 
-            if (! empty($product) && isset($product->quantity_limit) && $saleItem['quantity'] > $product->quantity_limit) {
-                throw new UnprocessableEntityHttpException('Please enter less than ' . $product->quantity_limit . ' quantity of ' . $product->name . ' product.');
-            }
-            $item = $this->calculationSaleItems($saleItem);
-            $saleItem = new SaleItem($item);
-            $sale->saleItems()->save($saleItem);
+        if (! empty($product) && isset($product->quantity_limit) && $saleItem['quantity'] > $product->quantity_limit) {
+            throw new UnprocessableEntityHttpException('Please enter less than ' . $product->quantity_limit . ' quantity of ' . $product->name . ' product.');
         }
 
-        $subTotalAmount = $sale->saleItems()->sum('sub_total');
+        // Mapear y completar campos necesarios para calculationSaleItems
+        $mappedSaleItem = [
+            'product_id' => $saleItem['product_id'] ?? null,
+            'asistence_id' => $saleItem['asistence_id'] ?? null,
+            'quantity' => $saleItem['quantity'] ?? 1,
+            'sale_unit' => $saleItem['sale_unit'] ?? 1,
 
-        if ($input['discount'] <= $subTotalAmount) {
-            $input['grand_total'] = $subTotalAmount - $input['discount'];
-        } else {
-            throw new UnprocessableEntityHttpException('Discount amount should not be greater than total.');
-        }
-        if ($input['tax_rate'] <= 100 && $input['tax_rate'] >= 0) {
-            $input['tax_amount'] = $input['grand_total'] * $input['tax_rate'] / 100;
-        } else {
-            throw new UnprocessableEntityHttpException('Please enter tax value between 0 to 100.');
-        }
-        $input['grand_total'] += $input['tax_amount'];
-        if ($input['shipping'] <= $input['grand_total'] && $input['shipping'] >= 0) {
-            $input['grand_total'] += $input['shipping'];
-        } else {
-            throw new UnprocessableEntityHttpException(__('messages.error.shipping_amount_not_be_greater'));
-        }
+            // Mapear 'price' a 'product_price'
+            'product_price' => $saleItem['price'] ?? $saleItem['product_price'] ?? 0,
 
-        if ($input['payment_status'] == Sale::PAID) {
-            $input['paid_amount'] = $input['grand_total'];
-            SalesPayment::create([
-                'sale_id' => $sale->id,
-                'payment_date' => Carbon::now(),
-                'payment_type' => $input['payment_type'],
-                'amount' => $input['paid_amount'],
-                'received_amount' => $input['paid_amount'],
-            ]);
-        } elseif ($input['payment_status'] == Sale::UNPAID) {
-            $input['paid_amount'] = 0;
-        }
+            // Campos con valores por defecto
+            'tax_type' => $saleItem['tax_type'] ?? 1, // 1 = EXCLUSIVE
+            'tax_value' => $saleItem['tax_value'] ?? 0,
+            'discount_type' => $saleItem['discount_type'] ?? 1, // 1 = PERCENTAGE
+            'discount_value' => $saleItem['discount_value'] ?? 0,
+        ];
 
-        $input['reference_code'] = getSettingValue('sale_code') . '_111' . $sale->id;
-        $sale->update($input);
-
-        return $sale;
+        $item = $this->calculationSaleItems($mappedSaleItem);
+        $saleItem = new SaleItem($item);
+        $sale->saleItems()->save($saleItem);
     }
+
+    $subTotalAmount = $sale->saleItems()->sum('sub_total');
+
+    if ($input['discount'] <= $subTotalAmount) {
+        $input['grand_total'] = $subTotalAmount - $input['discount'];
+    } else {
+        throw new UnprocessableEntityHttpException('Discount amount should not be greater than total.');
+    }
+    if ($input['tax_rate'] <= 100 && $input['tax_rate'] >= 0) {
+        $input['tax_amount'] = $input['grand_total'] * $input['tax_rate'] / 100;
+    } else {
+        throw new UnprocessableEntityHttpException('Please enter tax value between 0 to 100.');
+    }
+    $input['grand_total'] += $input['tax_amount'];
+    if ($input['shipping'] <= $input['grand_total'] && $input['shipping'] >= 0) {
+        $input['grand_total'] += $input['shipping'];
+    } else {
+        throw new UnprocessableEntityHttpException(__('messages.error.shipping_amount_not_be_greater'));
+    }
+
+    if ($input['payment_status'] == Sale::PAID) {
+        $input['paid_amount'] = $input['grand_total'];
+        SalesPayment::create([
+            'sale_id' => $sale->id,
+            'payment_date' => Carbon::now(),
+            'payment_type' => $input['payment_type'],
+            'amount' => $input['paid_amount'],
+            'received_amount' => $input['paid_amount'],
+        ]);
+    } elseif ($input['payment_status'] == Sale::UNPAID) {
+        $input['paid_amount'] = 0;
+    }
+
+    $input['reference_code'] = getSettingValue('sale_code') . '_111' . $sale->id;
+    $sale->update($input);
+
+    return $sale;
+}
 
     /**
      * @return mixed

@@ -131,7 +131,6 @@ const PosMainPage = (props) => {
         },
     });
 
-    // Función mejorada para calcular el costo con validación de tipos
     const calculateItemCost = (item) => {
         if (!item) return 0;
 
@@ -146,10 +145,12 @@ const PosMainPage = (props) => {
                 0;
             return Number(price);
         } else {
-            // Para productos, usar product_price o calculateProductCost
+            // Para productos, usar product_price con fallbacks
             const price = item.product_price ||
-                item.fix_net_unit ||
+                item.attributes?.product_price ||
                 item.price ||
+                item.attributes?.price ||
+                item.fix_net_unit ||
                 calculateProductCost(item) ||
                 0;
             return Number(price);
@@ -616,21 +617,21 @@ const PosMainPage = (props) => {
 
 
     const prepareData = (updateProducts) => {
-        // Corregir la preparación de sale_items
         const sale_items = updateProducts.map(item => {
             if (item.item_type === 'assistance') {
                 return {
                     asistence_id: item.id,
                     quantity: Number(item.quantity) || 1,
-                    // Usar el precio correcto para asistencias
                     price: Number(item.asistence_price || item.price || 0),
+                    sale_unit: Number(item.sale_unit || item.product_unit || item.attributes?.sale_unit || item.attributes?.product_unit || 1),
                 };
             } else {
+                // Para productos, usar product_price
                 return {
                     product_id: item.id,
                     quantity: Number(item.quantity) || 1,
-                    // Usar el precio correcto para productos
-                    price: Number(item.product_price || item.price || item.fix_net_unit || 0),
+                    price: Number(item.product_price || item.price || 0),
+                    sale_unit: Number(item.sale_unit || item.product_unit || item.attributes?.sale_unit || item.attributes?.product_unit || 1),
                 };
             }
         });
@@ -656,6 +657,8 @@ const PosMainPage = (props) => {
             hold_ref_no: hold_ref_no,
             payment_status: cashPaymentValue?.payment_status?.value,
         };
+        console.log('📤 Final form data for backend:', formValue);
+
         return formValue;
     };
 
@@ -757,6 +760,120 @@ const PosMainPage = (props) => {
         }
 
         setUpdateProducts(existingCart);
+    };
+
+    const addProductToCart = (product) => {
+        console.log('Adding product to cart:', product);
+
+        if (!product || !product.id) {
+            console.error('❌ Invalid product data:', product);
+            return;
+        }
+
+        const existingCart = [...updateProducts];
+        const productInCart = existingCart.find(
+            item => item.id === product.id && item.item_type !== 'assistance'
+        );
+
+        if (productInCart) {
+            // Si ya existe, incrementar cantidad
+            productInCart.quantity = (productInCart.quantity || 1) + 1;
+            console.log('Incremented quantity for product:', productInCart);
+        } else {
+            // Si no existe, añadir nuevo producto
+            const attributes = product.attributes || {};
+
+            const preparedProduct = {
+                id: product.id,
+                item_type: 'product', // Identificador para productos
+                name: attributes.name || 'Producto sin nombre',
+                code: attributes.code || attributes.product_code || '',
+                product_code: attributes.product_code || attributes.code || '',
+
+                // Precios y costos
+                product_price: Number(attributes.product_price || 0),
+                product_cost: Number(attributes.product_cost || 0),
+                price: Number(attributes.product_price || 0), // Campo alternativo
+                cost: Number(attributes.product_cost || 0),   // Campo alternativo
+
+                // Unidades
+                product_unit: attributes.product_unit || '1',
+                sale_unit: attributes.sale_unit || '1',
+                purchase_unit: attributes.purchase_unit || '1',
+
+                // Stock y alertas
+                stock_alert: Number(attributes.stock_alert || 0),
+                quantity_limit: Number(attributes.quantity_limit || 0),
+                in_stock: Number(attributes.in_stock || 0),
+
+                // Cantidad inicial
+                quantity: 1,
+
+                // Impuestos
+                order_tax: Number(attributes.order_tax || 0),
+                tax_type: attributes.tax_type || '1',
+
+                // Información adicional
+                notes: attributes.notes || '',
+                expiry_date: attributes.expiry_date || null,
+
+                // Categoría y marca
+                product_category_id: attributes.product_category_id,
+                brand_id: attributes.brand_id,
+                product_category_name: attributes.product_category_name || '',
+                brand_name: attributes.brand_name || '',
+
+                // Imagen
+                image: attributes.images?.imageUrls?.[0] || '/images/default-product-icon.png',
+                images: attributes.images || null,
+
+                // Unidades con nombres
+                product_unit_name: attributes.product_unit_name,
+                sale_unit_name: attributes.sale_unit_name,
+                purchase_unit_name: attributes.purchase_unit_name,
+
+                // Stock por almacén
+                stock: attributes.stock,
+                warehouse: attributes.warehouse,
+
+                // Código de barras
+                barcode_url: attributes.barcode_url || '',
+                barcode_symbol: attributes.barcode_symbol || 1,
+
+                // Almacén seleccionado
+                warehouse_id: selectedOption?.value,
+
+                // Mantener referencia completa a los atributos originales
+                attributes: attributes
+            };
+
+            // Verificar stock antes de agregar
+            if (preparedProduct.in_stock <= 0) {
+                dispatch(addToast({
+                    text: `El producto "${preparedProduct.name}" no tiene stock disponible`,
+                    type: toastType.WARNING
+                }));
+                return;
+            }
+
+            existingCart.push(preparedProduct);
+            console.log('Added new product to cart:', preparedProduct);
+        }
+
+        setUpdateProducts(existingCart);
+        updateCart(existingCart);
+
+        // Actualizar IDs para control
+        const productIds = existingCart
+            .filter(item => item.item_type !== 'assistance')
+            .map(item => item.id);
+        setCartProductIds(productIds);
+
+        // Mostrar mensaje de éxito
+        dispatch(addToast({
+            text: `Producto "${product.attributes?.name}" agregado al carrito`,
+            type: toastType.SUCCESS
+        }));
     };
 
     // const addAssistanceToCart = (assistance) => {
@@ -901,6 +1018,12 @@ const PosMainPage = (props) => {
 
     const onClickHoldModel = (isDetails = null) => {
         setHoldShow(true);
+    };
+
+    const isProductInCart = (productId) => {
+        return updateProducts.some(item =>
+            item.id === productId && item.item_type !== 'assistance'
+        );
     };
 
     const handleClickCloseRegister = () => {
@@ -1144,6 +1267,8 @@ const PosMainPage = (props) => {
                                 <Product
                                     cartProducts={updateProducts}
                                     updateCart={addToCarts}
+                                    addProductToCart={addProductToCart}  // Nueva función
+                                    isProductInCart={isProductInCart}    // Nueva función
                                     customCart={customCart}
                                     setCartProductIds={setCartProductIds}
                                     cartProductIds={cartProductIds}

@@ -132,6 +132,7 @@ class Sale extends BaseModel implements HasMedia, JsonResourceful
         'paid_amount' => 'numeric|nullable',
         'payment_type' => 'numeric|integer',
         'notes' => 'nullable',
+        //'sale_items.*.sale_unit' => 'nullable|numeric',
         'status' => 'integer|required',
         'payment_status' => 'integer|required',
         'reference_code' => 'nullable',
