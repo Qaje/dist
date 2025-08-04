@@ -101,52 +101,83 @@ const Sales = (props) => {
                 : "#/user/sales/return/" + id;
     };
 
-    const itemsValue =
-        currencySymbol &&
-        sales.length >= 0 &&
-        sales.map((sale) => ({
-            date: getFormattedDate(
-                sale.attributes.created_at,
-                allConfigData && allConfigData
-            ),
-            time: moment(sale.attributes.created_at).format("LT"),
-            reference_code: sale.attributes.reference_code,
-            customer_name: sale.attributes.customer_name,
-            user_name: sale.attributes.user_name,
-            warehouse_name: sale.attributes.warehouse_name,
-            status: sale.attributes.status,
-            payment_status: sale.attributes.payment_status,
-            payment_type: sale.attributes.payment_type,
-            grand_total: sale.attributes.grand_total,
-            paid_amount: sale.attributes.paid_amount
-                ? sale.attributes.paid_amount
-                : (0.0).toFixed(2),
-            id: sale.id,
-            currency: currencySymbol,
-            is_return: sale.attributes.is_return,
-        }));
+    // Función auxiliar para verificar si un objeto tiene las propiedades necesarias
+    const isSaleValid = (sale) => {
+        return sale && sale.attributes && typeof sale.attributes === 'object';
+    };
+
+    // Función auxiliar para obtener valor seguro
+    const getSafeValue = (obj, path, defaultValue = '') => {
+        try {
+            return path.split('.').reduce((o, p) => o && o[p], obj) || defaultValue;
+        } catch (error) {
+            console.warn('Error accessing path:', path, error);
+            return defaultValue;
+        }
+    };
+
+    const itemsValue = currencySymbol && sales && Array.isArray(sales) && sales.length > 0
+        ? sales
+            .filter(isSaleValid) // Filtrar solo las ventas válidas
+            .map((sale) => {
+                try {
+                    return {
+                        date: sale.attributes.created_at
+                            ? getFormattedDate(sale.attributes.created_at, allConfigData)
+                            : '',
+                        time: sale.attributes.created_at
+                            ? moment(sale.attributes.created_at).format("LT")
+                            : '',
+                        reference_code: getSafeValue(sale, 'attributes.reference_code', ''),
+                        customer_name: getSafeValue(sale, 'attributes.customer_name', ''),
+                        user_name: getSafeValue(sale, 'attributes.user_name', ''),
+                        warehouse_name: getSafeValue(sale, 'attributes.warehouse_name', ''),
+                        status: getSafeValue(sale, 'attributes.status', 0),
+                        payment_status: getSafeValue(sale, 'attributes.payment_status', 0),
+                        payment_type: getSafeValue(sale, 'attributes.payment_type', 0),
+                        grand_total: getSafeValue(sale, 'attributes.grand_total', 0),
+                        paid_amount: sale.attributes.paid_amount
+                            ? sale.attributes.paid_amount
+                            : (0.0).toFixed(2),
+                        id: sale.id || '',
+                        currency: currencySymbol,
+                        is_return: getSafeValue(sale, 'attributes.is_return', 0),
+                    };
+                } catch (error) {
+                    console.error('Error processing sale item:', sale, error);
+                    return null;
+                }
+            })
+            .filter(Boolean) // Remover elementos null
+        : [];
 
     useEffect(() => {
-        const grandTotalSum = () => {
+        const grandTotalSum = (items) => {
             let x = 0;
-            itemsValue.length &&
-                itemsValue.map((item) => {
-                    x = x + Number(item.grand_total);
-                    return x;
+            if (items && items.length) {
+                items.forEach((item) => {
+                    if (item && typeof item.grand_total === 'number') {
+                        x += Number(item.grand_total);
+                    }
                 });
+            }
             return x;
         };
-        const paidTotalSum = (itemsValue) => {
+
+        const paidTotalSum = (items) => {
             let x = 0;
-            itemsValue.length &&
-                itemsValue.map((item) => {
-                    x = x + Number(item.paid_amount);
-                    return x;
+            if (items && items.length) {
+                items.forEach((item) => {
+                    if (item && typeof item.paid_amount !== 'undefined') {
+                        x += Number(item.paid_amount);
+                    }
                 });
+            }
             return x;
         };
-        if (sales.length) {
-            const newObject = itemsValue.length && {
+
+        if (sales && sales.length && itemsValue && itemsValue.length) {
+            const newObject = {
                 date: "",
                 time: "",
                 reference_code: "Total",
@@ -160,15 +191,20 @@ const Sales = (props) => {
                 id: "totalRows",
                 currency: currencySymbol,
             };
-            const newItemValue =
-            itemsValue.length && newObject && itemsValue.concat(newObject);
-            const latestArray = newItemValue.map((item) => item);
-            newItemValue.length && setTableArray(latestArray);
+
+            const newItemValue = [...itemsValue, newObject];
+            setTableArray(newItemValue);
         } else {
             setTableArray([]);
+        }
+    }, [sales, currencySymbol, allConfigData]);
 
-        } 
-    }, [sales]);
+    // Debug: Agregar console.log para monitorear los datos
+    useEffect(() => {
+        console.log('Sales data:', sales);
+        console.log('Currency symbol:', currencySymbol);
+        console.log('Items value:', itemsValue);
+    }, [sales, currencySymbol, itemsValue]);
 
     const columns = [
         {

@@ -92,7 +92,7 @@ const CashPaymentModel = (props) => {
                                     name="received_amount"
                                     autoComplete="off"
                                     className="form-control-solid"
-                                    defaultValue={grandTotal}
+                                    value={cashPaymentValue.received_amount || grandTotal}
                                     onChange={(e) => onChangeInput(e)}
                                 />
                             </Form.Group>
@@ -124,7 +124,6 @@ const CashPaymentModel = (props) => {
                                     autoComplete="off"
                                     readOnly={true}
                                     className="form-control-solid"
-                                    defaultValue={0.0}
                                     value={Number(summation).toFixed(2)}
                                 />
                             </Form.Group>
@@ -170,7 +169,7 @@ const CashPaymentModel = (props) => {
                                     placeholder={placeholderText(
                                         "globally.input.note.placeholder.label"
                                     )}
-                                    value={cashPaymentValue.notes}
+                                    value={cashPaymentValue.notes || ""}
                                 />
                                 <span className="text-danger">
                                     {errors["notes"] ? errors["notes"] : null}
@@ -209,109 +208,109 @@ const CashPaymentModel = (props) => {
                                     className="mb-0 text-nowrap"
                                 >
                                     <tbody>
-                                        <tr>
-                                            <td scope="row" className="ps-3">
-                                                {getFormattedMessage(
-                                                    "dashboard.recentSales.total-product.label"
-                                                )}
-                                            </td>
-                                            <td className="px-3">
+                                    <tr>
+                                        <td scope="row" className="ps-3">
+                                            {getFormattedMessage(
+                                                "dashboard.recentSales.total-product.label"
+                                            )}
+                                        </td>
+                                        <td className="px-3">
                                                 <span className="btn btn-primary cursor-default rounded-md total-qty-text d-flex align-items-center justify-content-center p-2">
                                                     {totalQty}
                                                 </span>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td scope="row" className="ps-3">
-                                                {getFormattedMessage(
-                                                    "pos-total-amount.title"
-                                                )}
-                                            </td>
-                                            <td className="px-3">
-                                                {currencySymbolHandling(
-                                                    allConfigData,
-                                                    settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
-                                                    subTotal ? subTotal : "0.00"
-                                                )}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td scope="row" className="ps-3">
-                                                {getFormattedMessage(
-                                                    "globally.detail.order.tax"
-                                                )}
-                                            </td>
-                                            <td className="px-3">
-                                                {currencySymbolHandling(
-                                                    allConfigData,
-                                                    settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
-                                                    taxTotal ? taxTotal : "0.00"
-                                                )}{" "}
-                                                (
-                                                {cartItemValue.tax
-                                                    ? parseFloat(
-                                                          cartItemValue.tax
-                                                      ).toFixed(2)
-                                                    : "0.00"}{" "}
-                                                %)
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td scope="row" className="ps-3">
-                                                {getFormattedMessage(
-                                                    "globally.detail.discount"
-                                                )}
-                                            </td>
-                                            <td className="px-3">
-                                                {currencySymbolHandling(
-                                                    allConfigData,
-                                                    settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
-                                                    cartItemValue.discount
-                                                        ? cartItemValue.discount
-                                                        : "0.00"
-                                                )}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td scope="row" className="ps-3">
-                                                {getFormattedMessage(
-                                                    "globally.detail.shipping"
-                                                )}
-                                            </td>
-                                            <td className="px-3">
-                                                {currencySymbolHandling(
-                                                    allConfigData,
-                                                    settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
-                                                    cartItemValue.shipping
-                                                        ? cartItemValue.shipping
-                                                        : "0.00"
-                                                )}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td scope="row" className="ps-3">
-                                                {getFormattedMessage(
-                                                    "globally.detail.grand.total"
-                                                )}
-                                            </td>
-                                            <td className="px-3">
-                                                {currencySymbolHandling(
-                                                    allConfigData,
-                                                    settings.attributes &&
-                                                        settings.attributes
-                                                            .currency_symbol,
-                                                    grandTotal
-                                                )}
-                                            </td>
-                                        </tr>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td scope="row" className="ps-3">
+                                            {getFormattedMessage(
+                                                "pos-total-amount.title"
+                                            )}
+                                        </td>
+                                        <td className="px-3">
+                                            {currencySymbolHandling(
+                                                allConfigData,
+                                                settings.attributes &&
+                                                settings.attributes
+                                                    .currency_symbol,
+                                                subTotal ? subTotal : "0.00"
+                                            )}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td scope="row" className="ps-3">
+                                            {getFormattedMessage(
+                                                "globally.detail.order.tax"
+                                            )}
+                                        </td>
+                                        <td className="px-3">
+                                            {currencySymbolHandling(
+                                                allConfigData,
+                                                settings.attributes &&
+                                                settings.attributes
+                                                    .currency_symbol,
+                                                taxTotal ? taxTotal : "0.00"
+                                            )}{" "}
+                                            (
+                                            {cartItemValue.tax
+                                                ? parseFloat(
+                                                    cartItemValue.tax
+                                                ).toFixed(2)
+                                                : "0.00"}{" "}
+                                            %)
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td scope="row" className="ps-3">
+                                            {getFormattedMessage(
+                                                "globally.detail.discount"
+                                            )}
+                                        </td>
+                                        <td className="px-3">
+                                            {currencySymbolHandling(
+                                                allConfigData,
+                                                settings.attributes &&
+                                                settings.attributes
+                                                    .currency_symbol,
+                                                cartItemValue.discount
+                                                    ? cartItemValue.discount
+                                                    : "0.00"
+                                            )}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td scope="row" className="ps-3">
+                                            {getFormattedMessage(
+                                                "globally.detail.shipping"
+                                            )}
+                                        </td>
+                                        <td className="px-3">
+                                            {currencySymbolHandling(
+                                                allConfigData,
+                                                settings.attributes &&
+                                                settings.attributes
+                                                    .currency_symbol,
+                                                cartItemValue.shipping
+                                                    ? cartItemValue.shipping
+                                                    : "0.00"
+                                            )}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td scope="row" className="ps-3">
+                                            {getFormattedMessage(
+                                                "globally.detail.grand.total"
+                                            )}
+                                        </td>
+                                        <td className="px-3">
+                                            {currencySymbolHandling(
+                                                allConfigData,
+                                                settings.attributes &&
+                                                settings.attributes
+                                                    .currency_symbol,
+                                                grandTotal
+                                            )}
+                                        </td>
+                                    </tr>
                                     </tbody>
                                 </Table>
                             </div>
@@ -385,4 +384,5 @@ const CashPaymentModel = (props) => {
         </Modal>
     );
 };
+
 export default CashPaymentModel;

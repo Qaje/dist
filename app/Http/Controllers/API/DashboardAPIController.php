@@ -74,9 +74,12 @@ class DashboardAPIController extends AppBaseController
 
     public function getRecentSales(): SaleCollection
     {
-        $recentSales = Sale::latest()->take(5)->get();
-        SaleResource::usingWithCollection();
-
+        //$recentSales = Sale::latest()->take(5)->get();
+        //SaleResource::usingWithCollection();
+        $recentSales = Sale::with(['customer', 'saleItems', 'warehouse']) // agrega las relaciones que necesites
+                      ->latest()
+                      ->take(5)
+                      ->get();
         return new SaleCollection($recentSales);
     }
 

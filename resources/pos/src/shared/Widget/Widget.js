@@ -20,6 +20,14 @@ const Widget = (props) => {
         </Tooltip>
     );
 
+    // ✅ Configuración de transición para react-bootstrap
+    const overlayTransition = {
+        timeout: {
+            enter: 300,
+            exit: 150
+        }
+    };
+
     return (
         <div className="col-xxl-3 col-xl-4 col-sm-6 widget">
             <div
@@ -36,6 +44,7 @@ const Widget = (props) => {
                         placement="bottom"
                         delay={{ show: 250, hide: 400 }}
                         overlay={renderTooltip}
+                        transition={overlayTransition} // ✅ Agregar transición requerida
                     >
                         <h2 className="fs-1-xxl fw-bolder text-white">
                             {currencySymbolHandling(
@@ -52,4 +61,5 @@ const Widget = (props) => {
         </div>
     );
 };
+
 export default Widget;
