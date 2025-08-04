@@ -19,6 +19,7 @@ import ShowPayment from "../../shared/showPayment/ShowPayment";
 import CreatePaymentModal from "./CreatePaymentModal";
 import { fetchSalePayments } from "../../store/action/salePaymentAction";
 import TopProgressBar from "../../shared/components/loaders/TopProgressBar";
+import { fetchCustomers } from "../../store/action/customerAction";
 
 const Sales = (props) => {
     const {
@@ -31,7 +32,9 @@ const Sales = (props) => {
         frontSetting,
         isCallSaleApi,
         allConfigData,
-        isCallFetchDataApi
+        isCallFetchDataApi,
+        customers,
+        fetchCustomers
     } = props;
     const [deleteModel, setDeleteModel] = useState(false);
     const [isShowPaymentModel, setIsShowPaymentModel] = useState(false);
@@ -43,6 +46,7 @@ const Sales = (props) => {
 
     useEffect(() => {
         fetchFrontSetting();
+        fetchCustomers();
     }, []);
 
     const currencySymbol =
@@ -161,13 +165,13 @@ const Sales = (props) => {
                 currency: currencySymbol,
             };
             const newItemValue =
-            itemsValue.length && newObject && itemsValue.concat(newObject);
+                itemsValue.length && newObject && itemsValue.concat(newObject);
             const latestArray = newItemValue.map((item) => item);
             newItemValue.length && setTableArray(latestArray);
         } else {
             setTableArray([]);
 
-        } 
+        }
     }, [sales]);
 
     const columns = [
@@ -441,6 +445,9 @@ const Sales = (props) => {
                     isPaymentStatus
                     isStatus
                     isPaymentType
+                    isCustomerFilter // ✅ Agregar filtro de cliente
+                    customers={customers}
+                    fetchCustomers={fetchCustomers}
                     isCallFetchDataApi={isCallFetchDataApi}
                 />
             </div>
@@ -484,7 +491,8 @@ const mapStateToProps = (state) => {
         frontSetting,
         isCallSaleApi,
         allConfigData,
-        isCallFetchDataApi
+        isCallFetchDataApi,
+        customers
     } = state;
     return {
         sales,
@@ -493,7 +501,8 @@ const mapStateToProps = (state) => {
         frontSetting,
         isCallSaleApi,
         allConfigData,
-        isCallFetchDataApi
+        isCallFetchDataApi,
+        customers
     };
 };
 
@@ -501,4 +510,5 @@ export default connect(mapStateToProps, {
     fetchSales,
     salePdfAction,
     fetchFrontSetting,
+    fetchCustomers
 })(Sales);

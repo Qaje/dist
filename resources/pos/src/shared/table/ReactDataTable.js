@@ -14,6 +14,7 @@ import FilterDropdown from "../filterMenu/FilterDropdown";
 import { setProductUnitId } from "../../store/action/productUnitIdAction";
 import { callFetchDataApi } from "../../store/action/updateBrand";
 import { callImportProductApi } from "../../store/action/importProductApiAction";
+import { fetchCustomers } from "../../store/action/customerAction";
 
 const ReactDataTable = (props) => {
     const {
@@ -60,8 +61,11 @@ const ReactDataTable = (props) => {
         brandFilterTitle,
         productCategoryFilterTitle,
         callAPIAfterImport,
-        pagination=true,
-        selectableRows=false
+        pagination = true,
+        selectableRows = false,
+        isCustomerFilter, // ✅ Nueva prop
+        customers, // ✅ Nueva prop
+        fetchCustomers
     } = props;
     const [perPage, setPerPages] = useState(defaultLimit);
     const [pageSize, setPageSize] = useState(Filters.OBJ.pageSize);
@@ -80,6 +84,7 @@ const ReactDataTable = (props) => {
     const [productUnit, setProductUnit] = useState();
     const [brand, setBrand] = useState();
     const [productCategory, setProductCategory] = useState();
+    const [customer, setCustomer] = useState();
 
     const [show, setShow] = useState(false);
     const dispatch = useDispatch();
@@ -122,6 +127,7 @@ const ReactDataTable = (props) => {
         selectDate,
         brand,
         productCategory,
+        customer
     ]);
 
     const handleSearch = (searchText) => {
@@ -149,6 +155,7 @@ const ReactDataTable = (props) => {
         setTableWarehouseValue({ label: "All", value: "0" });
         setBrand({ label: "All", value: "0" });
         setProductCategory({ label: "All", value: "0" });
+        setCustomer({ label: "All", value: "0" });
         dispatch({ type: "ON_TOGGLE", payload: false });
     };
 
@@ -181,6 +188,7 @@ const ReactDataTable = (props) => {
                             setTransferStatusData={setTransferStatus}
                             setPaymentTypeData={setPaymentType}
                             setPaymentStatusData={setPaymentStatus}
+                            setCustomerData={setCustomer}
                             onExcelClick={onExcelClick}
                             goToImport={goToImport}
                             paymentStatus={paymentStatus}
@@ -203,6 +211,10 @@ const ReactDataTable = (props) => {
                             isImportDropdown={isImportDropdown}
                             isProductCategoryFilter={isProductCategoryFilter}
                             isBrandFilter={isBrandFilter}
+                            isCustomerFilter={isCustomerFilter} // ✅ Agregar prop
+                            customer={customer} // ✅ Agregar valor
+                            customers={customers} // ✅ Agregar opciones
+                            fetchCustomers={fetchCustomers}
                             productCategory={productCategory}
                             brandFilterTitle={brandFilterTitle}
                             productCategoryFilterTitle={
@@ -285,8 +297,8 @@ const ReactDataTable = (props) => {
                                 {importBtnTitle
                                     ? getFormattedMessage(importBtnTitle)
                                     : getFormattedMessage(
-                                          "product.import.title"
-                                      )}
+                                        "product.import.title"
+                                    )}
                             </Button>
                         </div>
                     ) : (
@@ -314,8 +326,8 @@ const ReactDataTable = (props) => {
                         ? ""
                         : searchText.toLowerCase()
                     : "" || searchText !== ""
-                    ? searchText.toLowerCase()
-                    : "",
+                        ? searchText.toLowerCase()
+                        : "",
             start_date: selectDate ? selectDate.start_date : null,
             end_date: selectDate ? selectDate.end_date : null,
             payment_status: paymentStatus ? paymentStatus.value : null,
@@ -326,9 +338,13 @@ const ReactDataTable = (props) => {
             warehouse_id: warehouseValue
                 ? warehouseValue.value
                 : tableWarehouseValue
-                ? tableWarehouseValue.value
-                : null,
-            customer_id: customerId ? customerId : null,
+                    ? tableWarehouseValue.value
+                    : null,
+            customer_id: customerId
+                ? customerId
+                : customer && customer.value !== "0"
+                    ? customer.value
+                    : null,
             brand_id: brand ? brand.value : null,
             product_category_id: productCategory ? productCategory.value : null,
         };

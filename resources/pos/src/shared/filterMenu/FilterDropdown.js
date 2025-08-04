@@ -17,6 +17,7 @@ import { Button } from "react-bootstrap-v5";
 import { fetchAllBrands } from "../../store/action/brandsAction";
 import { fetchAllProductCategories } from "../../store/action/productCategoryAction";
 import { setProductUnitId } from "../../store/action/productUnitIdAction";
+import { fetchCustomers } from "../../store/action/customerAction";
 
 const FilterDropdown = (props) => {
     const {
@@ -44,6 +45,9 @@ const FilterDropdown = (props) => {
         isImportDropdown,
         isProductCategoryFilter,
         isBrandFilter,
+        isCustomerFilter,
+        customers,
+        setCustomerData,
         brands,
         productCategories,
         setBrandData,
@@ -52,6 +56,7 @@ const FilterDropdown = (props) => {
         productCategoryFilterTitle,
         fetchAllBrands,
         fetchAllProductCategories,
+        fetchCustomers
     } = props;
 
     const dispatch = useDispatch();
@@ -69,18 +74,34 @@ const FilterDropdown = (props) => {
     const [transferStatus, setTransferStatus] = useState();
     const [paymentStatus, setPaymentStatus] = useState();
     const [paymentType, setPaymentType] = useState();
+    const [customer, setCustomer] = useState();
 
     useEffect(() => {
-        if(isBrandFilter){
+        if (isBrandFilter) {
             fetchAllBrands();
         }
-        if(isProductCategoryFilter){
+        if (isProductCategoryFilter) {
             fetchAllProductCategories();
         }
-        if(isUnitFilter){
+        if (isUnitFilter) {
             fetchAllBaseUnits();
         }
-    }, [fetchAllBaseUnits, fetchAllBrands, fetchAllProductCategories]);
+        if (isCustomerFilter) {
+            fetchCustomers(); // ✅ AGREGAR ESTA LÍNEA
+        }
+    }, [fetchAllBaseUnits, fetchAllBrands, fetchAllProductCategories, fetchCustomers]);
+
+
+    let customerDefaultValue = [];
+    if (customers && customers.length > 0) {
+        customerDefaultValue = customers.map((option) => {
+            return {
+                value: option.id,
+                label: option.attributes ? option.attributes.name : option.name,
+            };
+        });
+    }
+    customerDefaultValue = [{ value: "0", label: "All" }, ...customerDefaultValue];
 
     const transferStatusFilterOptions = getFormattedOptions(
         transferStatusOptions
@@ -170,7 +191,15 @@ const FilterDropdown = (props) => {
         setTransferStatus({ label: "All", value: "0" });
         setPaymentStatus({ label: "All", value: "0" });
         setPaymentType({ label: "All", value: "0" });
+        setCustomer({ label: "All", value: "0" });
         onResetClick();
+    };
+
+    const onCustomerChange = (obj) => {
+        dispatch({ type: "RESET_OPTION", payload: false });
+        setCustomer(obj);
+        setCustomerData(obj);
+        dispatch({ type: "ON_TOGGLE", payload: false });
     };
 
     const onToggle = () => {
@@ -500,6 +529,26 @@ const FilterDropdown = (props) => {
                         </Button>
                     </Dropdown.Header>
                 ) : null}
+                {isCustomerFilter && customers ? (
+                    <Dropdown.Header
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
+                        eventkey="customer"
+                        className="mb-5 p-0"
+                    >
+                        <ReactSelect
+                            onChange={onCustomerChange}
+                            name="customer"
+                            title={getFormattedMessage("customer.title")}
+                            value={isReset ? customerDefaultValue[0] : customer}
+                            isRequired
+                            defaultValue={customerDefaultValue[0]}
+                            placeholder={getFormattedMessage("customer.title")}
+                            data={customerDefaultValue}
+                        />
+                    </Dropdown.Header>
+                ) : null}
                 <div className="btn btn-secondary me-5" onClick={onReset}>
                     {getFormattedMessage("reset.title")}
                 </div>
@@ -509,12 +558,13 @@ const FilterDropdown = (props) => {
 };
 
 const mapStateToProps = (state) => {
-    const { base, brands, productCategories } = state;
-    return { base, brands, productCategories };
+    const { base, brands, productCategories, customers } = state;
+    return { base, brands, productCategories, customers };
 };
 
 export default connect(mapStateToProps, {
     fetchAllBaseUnits,
     fetchAllBrands,
     fetchAllProductCategories,
+    fetchCustomers
 })(FilterDropdown);
