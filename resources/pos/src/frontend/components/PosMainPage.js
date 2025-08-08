@@ -762,6 +762,63 @@ const PosMainPage = (props) => {
         setUpdateProducts(existingCart);
     };
 
+    const incrementAssistanceInCart = (assistanceId) => {
+        const existingCart = [...updateProducts];
+        const assistanceInCart = existingCart.find(
+            item => item.id === assistanceId && item.item_type === 'assistance'
+        );
+
+        if (assistanceInCart) {
+            assistanceInCart.quantity = (assistanceInCart.quantity || 1) + 1;
+            setUpdateProducts(existingCart);
+
+            dispatch(addToast({
+                text: `Cantidad incrementada para "${assistanceInCart.name}"`,
+                type: toastType.SUCCESS
+            }));
+        }
+    };
+
+    const decrementAssistanceInCart = (assistanceId) => {
+        const existingCart = [...updateProducts];
+        const assistanceInCart = existingCart.find(
+            item => item.id === assistanceId && item.item_type === 'assistance'
+        );
+
+        if (assistanceInCart) {
+            if (assistanceInCart.quantity > 1) {
+                assistanceInCart.quantity = assistanceInCart.quantity - 1;
+                setUpdateProducts(existingCart);
+
+                dispatch(addToast({
+                    text: `Cantidad decrementada para "${assistanceInCart.name}"`,
+                    type: toastType.SUCCESS
+                }));
+            } else {
+                // Si la cantidad es 1, remover del carrito
+                onDeleteCartItem(assistanceId, 'assistance');
+
+                dispatch(addToast({
+                    text: `Servicio removido del carrito`,
+                    type: toastType.INFO
+                }));
+            }
+        }
+    };
+
+    const getAssistanceQuantityInCart = (assistanceId) => {
+        const assistanceInCart = updateProducts.find(
+            item => item.id === assistanceId && item.item_type === 'assistance'
+        );
+        return assistanceInCart ? assistanceInCart.quantity || 0 : 0;
+    };
+
+    const isAssistanceInCartById = (assistanceId) => {
+        return updateProducts.some(item =>
+            item.id === assistanceId && item.item_type === 'assistance'
+        );
+    };
+
     const addProductToCart = (product) => {
         console.log('Adding product to cart:', product);
 
@@ -1281,10 +1338,10 @@ const PosMainPage = (props) => {
                                 />
                             ) : (
                                 <Assistance
-                                    isAssistanceInCart={isAssistanceInCart}
-                                    posAllAssistances={posAllAssistances}
                                     cartProducts={updateProducts}
                                     updateCart={addToCarts}
+                                    isAssistanceInCart={isAssistanceInCart}
+                                    posAllAssistances={posAllAssistances}
                                     customCart={customCart}
                                     setCartAssistanceIds={setCartAssistanceIds}
                                     cartAssistanceIds={cartAssistanceIds}
@@ -1293,15 +1350,20 @@ const PosMainPage = (props) => {
                                     onScrollCallAPI={onScrollCallAPI}
                                     page={page}
                                     setPage={setPage}
+                                    // Props nuevas para funcionalidad idéntica a Product
                                     addAssistanceToCart={addAssistanceToCart}
+                                    incrementAssistanceInCart={incrementAssistanceInCart}
+                                    decrementAssistanceInCart={decrementAssistanceInCart}
+                                    getAssistanceQuantityInCart={getAssistanceQuantityInCart}
+                                    frontSetting={frontSetting}
+                                    allConfigData={allConfigData}
+                                    newCost={newCost}
                                 />
                                 // <Assistance
-
-
-                                //     isAssistanceInCart={isAssistanceInCart}
-                                //     posAllAssistances={posAllAssistances}
                                 //     cartProducts={updateProducts}
                                 //     updateCart={addToCarts}
+                                //     isAssistanceInCart={isAssistanceInCart}
+                                //     posAllAssistances={posAllAssistances}
                                 //     customCart={customCart}
                                 //     setCartAssistanceIds={setCartAssistanceIds}
                                 //     cartAssistanceIds={cartAssistanceIds}
