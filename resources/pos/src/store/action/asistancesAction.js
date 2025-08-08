@@ -23,7 +23,7 @@ export const fetchAssistances = (filter = {}, isLoading = true) => async (dispat
     }
 
     let url = apiBaseURL.ASSISTANCES;
-    if (filter.page || filter.pageSize || filter.search || filter.order_By) {
+    if (filter.page || filter.pageSize || filter.search ) {
         url += requestParam(filter);
     }
 
@@ -40,11 +40,15 @@ export const fetchAssistances = (filter = {}, isLoading = true) => async (dispat
             asistence_price: item.attributes.asistence_price,
             asistence_unit: item.attributes.asistence_unit,
             estimated_duration: item.attributes.estimated_duration,
+            image_path: item.attributes.image_path,
+            image_url: item.attributes.image_url,
             order_tax: item.attributes.order_tax,
             tax_type: item.attributes.tax_type,
             description: item.attributes.description,
             notes: item.attributes.notes,
             is_active: item.attributes.is_active,
+            sale_unit: item.attributes.sale_unit,
+            sale_unit_name: item.attributes.sale_unit_name,
             category: item.attributes.category?.name || 'N/A',
             created_at: item.attributes.created_at || null
         }));

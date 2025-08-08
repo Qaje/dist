@@ -70,30 +70,7 @@ const AssistanceCard = ({ assistance, onAddToCart, isInCart, settings }) => {
 
     return (
         <div className="card assistance-card h-100 shadow-sm">
-            <div className="position-relative">
-                {/* Imagen del servicio */}
-                <img
-                    className="card-img-top"
-                    src={image_url}
-                    alt={name}
-                    style={{
-                        height: '120px',
-                        objectFit: 'cover',
-                        backgroundColor: '#f8f9fa'
-                    }}
-                    onError={handleImageError}
-                />
 
-                {/* Badge de estado si está en carrito */}
-                {isInCart && (
-                    <span
-                        className="badge bg-success position-absolute"
-                        style={{ top: '10px', right: '10px' }}
-                    >
-                        En Carrito
-                    </span>
-                )}
-            </div>
 
             <div className="card-body d-flex flex-column">
                 {/* Nombre y código */}
@@ -108,6 +85,31 @@ const AssistanceCard = ({ assistance, onAddToCart, isInCart, settings }) => {
                         </span>
                     </div>
                 )}
+
+                <div className="position-relative">
+                    {/* Imagen del servicio */}
+                    <img
+                        className="card-img-top"
+                        src={image_url}
+                        alt={name}
+                        style={{
+                            height: '120px',
+                            objectFit: 'cover',
+                            backgroundColor: '#f8f9fa'
+                        }}
+                        onError={handleImageError}
+                    />
+
+                    {/* Badge de estado si está en carrito */}
+                    {isInCart && (
+                        <span
+                            className="badge bg-success position-absolute"
+                            style={{ top: '10px', right: '10px' }}
+                        >
+                        En Carrito
+                    </span>
+                    )}
+                </div>
 
                 {/* Descripción */}
                 {description && description !== 'Servicio' && (
@@ -259,7 +261,7 @@ const Assistance = ({
                 description: assistance.attributes?.description || '',
                 notes: assistance.attributes?.notes || '',
                 category_id: assistance.attributes?.asistence_category_id,
-                image: assistance.attributes?.image_url || defaultImage,
+                image_url: assistance.attributes?.image_path || defaultImage,
                 attributes: assistance.attributes,
                 // Campos adicionales para compatibilidad
                 asistence_price: Number(assistance.attributes?.asistence_price || 0),

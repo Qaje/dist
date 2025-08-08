@@ -5,6 +5,7 @@ import { getFormattedMessage, placeholderText } from "../../shared/sharedMethod"
 import { addAssistance, editAssistance } from '../../store/action/asistancesAction';
 import { fetchUnits } from "../../store/action/unitsAction";
 import ModelFooter from '../../shared/components/modelFooter';
+import {Button} from "react-bootstrap";
 
 const AssistanceForm = (props) => {
     const {
@@ -245,6 +246,52 @@ const AssistanceForm = (props) => {
                             )}
                         </div>
 
+                        <div className="col-12 mb-3">
+                            <Form.Group>
+                                <Form.Label>Imagen del Servicio</Form.Label>
+                                <Form.Control
+                                    id="imageInput"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="mb-2"
+                                />
+                                <Form.Text className="text-muted">
+                                    Formatos soportados: JPEG, PNG, GIF, WebP. Tamaño máximo: 5MB
+                                </Form.Text>
+
+                                {/* Vista previa de la imagen */}
+                                {imagePreview && (
+                                    <div className="mt-3">
+                                        <div className="d-flex align-items-center gap-3">
+                                            <img
+                                                src={imagePreview}
+                                                alt="Vista previa"
+                                                style={{
+                                                    width: '150px',
+                                                    height: '150px',
+                                                    objectFit: 'cover',
+                                                    borderRadius: '8px',
+                                                    border: '2px solid #dee2e6'
+                                                }}
+                                            />
+                                            <div>
+                                                <p className="mb-1"><strong>Archivo:</strong> {selectedImage?.name}</p>
+                                                <p className="mb-1"><strong>Tamaño:</strong> {(selectedImage?.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                <Button
+                                                    variant="outline-danger"
+                                                    size="sm"
+                                                    onClick={removeImage}
+                                                >
+                                                    Quitar imagen
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </Form.Group>
+                        </div>
+
                         <div className='col-md-6 mb-3'>
                             <label className='form-label'>
                                 Costo:
@@ -304,7 +351,7 @@ const AssistanceForm = (props) => {
 
                         <div className='col-md-6 mb-3'>
                             <label className='form-label'>
-                                Orden de impuestos:
+                                Porcentaje de Impuetos:
                             </label>
                             <input
                                 type='number'

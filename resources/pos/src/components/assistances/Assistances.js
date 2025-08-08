@@ -9,12 +9,14 @@ import ReactDataTable from "../../shared/table/ReactDataTable";
 import DeleteAssistance from "./DeleteAssistances";
 import CreateAssistance from "./CreateAssistances";
 import EditAssistance from "./EditAssistances";
+import AssistanceImageLightBox from "./AssistanceImageLightBox";
 import TabTitle from "../../shared/tab-title/TabTitle";
 import { getFormattedDate, getFormattedMessage, placeholderText, currencySymbolHandling } from "../../shared/sharedMethod";
 import ActionButton from "../../shared/action-buttons/ActionButton";
 import ErrorBoundary from "../../shared/components/ErrorBoundary";
 import { useNavigate } from 'react-router-dom';
 import moment from "moment";
+
 
 const Assistances = ({
     fetchAssistances,
@@ -33,6 +35,8 @@ const Assistances = ({
     const [isDelete, setIsDelete] = useState(null);
     const [editModel, setEditModel] = useState(false);
     const [assistance, setAsistance] = useState(null);
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [lightBoxImages, setLightBoxImages] = useState([]);
 
     // Función para cargar datos
     const loadAssistances = useCallback(async (filter = {}) => {
@@ -66,7 +70,6 @@ const Assistances = ({
             console.error('Error al cargar sale units:', error);
         }
     }, [fetchUnits]);
-
     // Cargar datos iniciales
     useEffect(() => {
         loadAssistances({});
@@ -78,8 +81,25 @@ const Assistances = ({
     useEffect(() => {
         if (isCallFetchDataApi) {
             loadAssistances({});
+            console.log('loadSaleUnits', loadSaleUnits())
         }
-    }, [isCallFetchDataApi, loadAssistances]);
+        const loadData = async () => {
+            try {
+                // Cargar sale units si no existen
+                if (saleUnits) {
+                    console.log('🔄 Cargando sale units...');
+                    await fetchUnits({}, true); // Con loading = true
+                    console.log("saleUnits", saleUnits)
+                } else {
+                    console.log('✅ Sale units ya disponibles:', saleUnits.length);
+                }
+
+            } catch (error) {
+                console.error('❌ Error al cargar datos en modal:', error);
+            }
+        }
+        loadData();
+    }, [isCallFetchDataApi, loadAssistances, fetchUnits]);
 
     const handleClose = (item) => {
         setEditModel(!editModel);
@@ -149,10 +169,10 @@ const Assistances = ({
 
     // Función para obtener el nombre de la sale unit
     const getSaleUnitName = (saleUnitId) => {
-        if (!saleUnitId || !saleUnits || saleUnits.length === 0) {
-            return 'Sin unidad';
-        }
-
+        // if (!saleUnitId || !saleUnits || saleUnits.length === 0) {
+        //     return 'Sin unidad';
+        // }
+        console.log("saleUnitId==", saleUnitId)
         const saleUnit = saleUnits.find(unit =>
             unit.id === saleUnitId ||
             unit.id === parseInt(saleUnitId)
@@ -161,29 +181,50 @@ const Assistances = ({
         return saleUnit ? `${saleUnit.name} (${saleUnit.short_name})` : 'Sin unidad';
     };
 
-    // Procesamiento seguro de los datos
     const itemsValue = (asistances || []).map((assistance) => {
-        console.log('Procesando assistance:', assistance);
+        console.log('🔍 Datos completos de assistance:', assistance);
+
+        // ✅ Ahora los datos vienen directamente del reducer procesado
+        // Ya no hay structure 'attributes', los datos están en el nivel raíz
+
+        // Obtener image_url directamente
+        let imageUrl = assistance.image_url;
+
+        // Si no viene image_url, pero sí image_path, construirla
+        if (!imageUrl && assistance.image_path) {
+            imageUrl = `http://dist.test/storage/${assistance.image_path}`;
+            console.log('🔧 Construyendo image_url desde image_path:', imageUrl);
+        }
+
+        console.log('📷 image_url final:', imageUrl);
+
         return {
             id: assistance.id,
             name: assistance.name || 'N/A',
             code: assistance.code || 'N/A',
-            category: getCategoryName(assistance.asistence_category_id || assistance.category_id),
+            category: getCategoryName(assistance.asistence_category_id),
             asistence_cost: formattedPrice(assistance.asistence_cost || 0),
             asistence_price: formattedPrice(assistance.asistence_price || 0),
             asistence_unit: assistance.asistence_unit || 'N/A',
-            sale_unit: getSaleUnitName(assistance.sale_unit), // Nueva columna
+            sale_unit: getSaleUnitName(assistance.sale_unit),
             estimated_duration: assistance.estimated_duration || 'N/A',
             is_active: assistance.is_active || false,
             description: assistance.description || 'N/A',
             notes: assistance.notes || 'N/A',
+            image_url: imageUrl,
             date: getFormattedDate(
-                assistance?.attributes?.asistances && assistance?.attributes?.asistances[0]?.created_at,
-                allConfigData && allConfigData
+                assistance.created_at,
+                allConfigData
             ),
-            time: moment(assistance?.attributes?.asistances && assistance?.attributes?.asistances[0]?.created_at).format("LT"),
+            time: moment(assistance.created_at).format("LT"),
         };
     });
+
+    console.log('🔧 Items procesados con image_url:', itemsValue.map(item => ({
+        id: item.id,
+        name: item.name,
+        image_url: item.image_url
+    })));
 
     console.log('Items procesados para la tabla:', itemsValue);
 
@@ -198,6 +239,87 @@ const Assistances = ({
                     {row.name}
                 </span>
             )
+        },
+        {
+            name: 'Imagen',
+            selector: (row) => row.image_url,
+            sortable: false,
+            width: '100px',
+            cell: (row) => {
+                if (!row.image_url) {
+                    return (
+                        <div style={{
+                            width: '60px',
+                            height: '60px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '8px',
+                            border: '1px solid #dee2e6'
+                        }}>
+                            <i className="fas fa-image text-muted" style={{ fontSize: '24px' }}></i>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="d-flex align-items-center">
+                        <button
+                            type="button"
+                            className="btn btn-transparent me-2 d-flex align-items-center justify-content-center p-0"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('🔍 Abriendo lightbox para imagen:', row.image_url);
+                                setLightBoxImages([row.image_url]);
+                                setIsLightboxOpen(true);
+                            }}
+                            style={{ border: 'none', background: 'transparent' }}
+                        >
+                            <img
+                                src={row.image_url}
+                                alt={row.name}
+                                style={{
+                                    width: '60px',
+                                    height: '60px',
+                                    objectFit: 'cover',
+                                    borderRadius: '8px',
+                                    border: '1px solid #dee2e6',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.transform = 'scale(1.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.transform = 'scale(1)';
+                                }}
+                                onError={(e) => {
+                                    console.error('❌ Error cargando imagen:', row.image_url);
+                                    e.target.style.display = 'none';
+                                    // Crear placeholder de error
+                                    const errorDiv = document.createElement('div');
+                                    errorDiv.style.cssText = `
+                                width: 60px;
+                                height: 60px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                background-color: #f8f9fa;
+                                border-radius: 8px;
+                                border: 1px solid #dee2e6;
+                            `;
+                                    errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle text-warning" style="font-size: 20px;"></i>';
+                                    e.target.parentNode.appendChild(errorDiv);
+                                }}
+                                onLoad={() => {
+                                    console.log('✅ Imagen cargada exitosamente:', row.image_url);
+                                }}
+                            />
+                        </button>
+                    </div>
+                );
+            }
         },
         {
             name: getFormattedMessage("Codigo"),
@@ -345,6 +467,13 @@ const Assistances = ({
                     onDelete={isDelete}
                 />
             </MasterLayout>
+            {isLightboxOpen && lightBoxImages.length > 0 && (
+                <AssistanceImageLightBox
+                    isOpen={isLightboxOpen}
+                    setIsOpen={setIsLightboxOpen}
+                    lightBoxImages={lightBoxImages}
+                />
+            )}
         </ErrorBoundary>
     );
 };
@@ -366,31 +495,6 @@ const mapStateToProps = (state) => {
         isCallFetchDataApi: state.isCallFetchDataApi || false
     };
 };
-// const mapStateToProps = (state) => {
-//     console.log('🗺️ mapStateToProps - Estado completo:', state);
-//     console.log('🗺️ mapStateToProps - Estado de asistencias:', state.asistances);
-//     console.log('🗺️ mapStateToProps - Estado de categorías:', state.assistanceCategory);
-//     console.log('🗺️ mapStateToProps - Estado de sale units:', state.saleUnits);
-
-//     console.log('🗺️ mapStateToProps - Datos extraídos:', {
-//         asistances: state.asistances?.data || [],
-//         categories: state.assistanceCategory?.data || [],
-//         saleUnits: state.saleUnits?.data || [], // Nuevo mapeo
-//         totalRecord: state.asistances?.meta?.total || 0,
-//         isLoading: state.asistances?.loading || false,
-//     });
-
-//     return {
-//         asistances: state.asistances?.data || [],
-//         categories: state.assistanceCategory?.data || [],
-//         saleUnits: state.saleUnits?.data || [], // Nuevo mapeo
-//         totalRecord: state.asistances?.meta?.total || 0,
-//         isLoading: state.asistances?.loading || false,
-//         allConfigData: state.allConfigData || {},
-//         isCallFetchDataApi: state.isCallFetchDataApi || false
-//     };
-// };
-
 export default connect(mapStateToProps, {
     fetchAssistances,
     fetchAssistanceCategories,

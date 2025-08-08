@@ -33,18 +33,43 @@ const Units = (props) => {
         fetchUnits(filter, true);
     };
 
-    const itemsValue = units.length >= 0 && units.map(unit => {
-        return (
-            {
-                date: getFormattedDate(unit.attributes.created_at, allConfigData && allConfigData),
-                time: moment(unit.attributes.created_at).format('LT'),
-                name: unit.attributes.name,
-                short_name: unit.attributes.short_name,
-                base_unit: unit.attributes.base_unit_name?.name ? unit.attributes.base_unit_name?.name : 'N/A',
-                id: unit.id
+    // const itemsValue = units.length >= 0 && units.map(unit => {
+    //     return (
+    //         {
+    //             date: getFormattedDate(
+    //                 unit?.attributes?.created_at,
+    //                 allConfigData && allConfigData
+    //             ),
+    //             time: moment(unit.attributes.created_at).format('LT'),
+    //             name: unit.attributes.name,
+    //             short_name: unit.attributes.short_name,
+    //             base_unit: unit.attributes.base_unit_name?.name ? unit.attributes.base_unit_name?.name : 'N/A',
+    //             id: unit.id
+    //         }
+    //     )
+    // });
+
+    const itemsValue = (units && Array.isArray(units) && units.length > 0)
+        ? units.map(unit => {
+            // Validar que unit existe y tiene created_at
+            if (!unit || !unit.created_at) {
+                console.warn('Unit inválido encontrado:', unit);
+                return null;
             }
-        )
-    });
+
+            return {
+                date: getFormattedDate(
+                    unit.created_at,  // ← Cambiar de unit.attributes.created_at
+                    allConfigData
+                ),
+                time: moment(unit.created_at).format('LT'),  // ← Cambiar aquí también
+                name: unit.name,          // ← Cambiar de unit.attributes.name
+                short_name: unit.short_name,  // ← Cambiar de unit.attributes.short_name
+                base_unit: unit.base_unit_name?.name || unit.base_unit || 'N/A',  // ← Ajustar
+                id: unit.id
+            };
+        }).filter(Boolean)
+        : [];
 
     const columns = [
         {

@@ -8,17 +8,19 @@ import { fetchAssistanceCategories } from '../../store/action/assistanceCategori
 import { fetchUnits } from "../../store/action/unitsAction";
 
 const CreateAssistance = ({
-    addAssistance,
-    onSubmitSuccess,
-    categories = [],
-    saleUnits = [],
-    fetchAssistanceCategories,
-    fetchUnits,
-    isLoadingUnits = false,
-    isLoadingCategories = false,
-}) => {
+                              addAssistance,
+                              onSubmitSuccess,
+                              categories = [],
+                              saleUnits = [],
+                              fetchAssistanceCategories,
+                              fetchUnits,
+                              isLoadingUnits = false,
+                              isLoadingCategories = false,
+                          }) => {
     const [show, setShow] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     const { register, handleSubmit, formState: { errors }, reset } = useForm();
 
     // Debug mejorado
@@ -70,8 +72,48 @@ const CreateAssistance = ({
         }
     }, [show, categories.length, saleUnits.length, fetchAssistanceCategories, fetchUnits]);
 
+    // Manejar selección de imagen
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validar tipo de archivo
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                alert('Por favor selecciona una imagen válida (JPEG, PNG, GIF, WebP)');
+                e.target.value = '';
+                return;
+            }
+
+            // Validar tamaño (máximo 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('La imagen no puede superar los 5MB');
+                e.target.value = '';
+                return;
+            }
+
+            setSelectedImage(file);
+
+            // Crear preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setImagePreview(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Remover imagen seleccionada
+    const removeImage = () => {
+        setSelectedImage(null);
+        setImagePreview(null);
+        // Limpiar el input file
+        document.getElementById('imageInput').value = '';
+    };
+
     const handleClose = () => {
         reset();
+        setSelectedImage(null);
+        setImagePreview(null);
         setShow(false);
     };
 
@@ -83,6 +125,7 @@ const CreateAssistance = ({
     const onSubmit = async (data) => {
         setIsLoading(true);
         console.log('📤 Datos RAW del formulario:', data);
+        console.log('🖼️ Imagen seleccionada:', selectedImage);
 
         try {
             // Verificar campos obligatorios
@@ -117,31 +160,45 @@ const CreateAssistance = ({
 
             console.log('🔍 Sale unit seleccionada:', selectedSaleUnit);
 
-            // Procesar los datos
-            const assistanceData = {
-                name: data.name.trim(),
-                code: data.code.trim(),
-                asistence_category_id: parseInt(data.asistence_category_id),
-                asistence_cost: parseFloat(data.asistence_cost) || 0,
-                asistence_price: parseFloat(data.asistence_price),
-                asistence_unit: data.asistence_unit?.trim() || '1',
-                estimated_duration: parseInt(data.estimated_duration) || 0,
-                order_tax: parseFloat(data.order_tax) || 0,
-                tax_type: data.tax_type || '1',
-                description: data.description?.trim() || null,
-                notes: data.notes?.trim() || null,
-                sale_unit: data.sale_unit ? parseInt(data.sale_unit) : null,
-                is_active: Boolean(data.is_active !== false),
-                // Incluir información de la categoría si es necesario
-                category: selectedCategory ? {
-                    id: selectedCategory.id || selectedCategory.attributes?.id,
-                    name: selectedCategory.name || selectedCategory.attributes?.name
-                } : null
-            };
+            // Crear FormData para enviar archivos
+            const formData = new FormData();
 
-            console.log('📦 Datos finales para enviar:', assistanceData);
+            // Agregar datos básicos
+            formData.append('name', data.name.trim());
+            formData.append('code', data.code.trim());
+            formData.append('asistence_category_id', parseInt(data.asistence_category_id));
+            formData.append('asistence_cost', parseFloat(data.asistence_cost) || 0);
+            formData.append('asistence_price', parseFloat(data.asistence_price));
+            formData.append('asistence_unit', data.asistence_unit?.trim() || '1');
+            formData.append('estimated_duration', parseInt(data.estimated_duration) || 0);
+            formData.append('order_tax', parseFloat(data.order_tax) || 0);
+            formData.append('tax_type', data.tax_type || '1');
+            formData.append('is_active', Boolean(data.is_active !== false) ? 1 : 0);
 
-            await addAssistance(assistanceData);
+            // Agregar campos opcionales
+            if (data.description?.trim()) {
+                formData.append('description', data.description.trim());
+            }
+            if (data.notes?.trim()) {
+                formData.append('notes', data.notes.trim());
+            }
+            if (data.sale_unit) {
+                formData.append('sale_unit', parseInt(data.sale_unit));
+            }
+
+            // Agregar imagen si fue seleccionada
+            if (selectedImage) {
+                formData.append('image', selectedImage);
+            }
+
+            console.log('📦 FormData preparado para envío');
+
+            // Log para debug (solo claves, no el archivo)
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + (pair[1] instanceof File ? `[File: ${pair[1].name}]` : pair[1]));
+            }
+
+            await addAssistance(formData);
             console.log('✅ Asistencia creada exitosamente');
 
             // Limpiar y cerrar
@@ -151,6 +208,7 @@ const CreateAssistance = ({
         } catch (error) {
             console.error("❌ Error al crear asistencia:", error);
             // Aquí podrías mostrar un toast o mensaje de error al usuario
+            alert(error.message || 'Error al crear la asistencia');
         } finally {
             setIsLoading(false);
         }
@@ -238,14 +296,6 @@ const CreateAssistance = ({
                                             Selecciona una categoría
                                         </Form.Control.Feedback>
                                     )}
-
-                                    {/* Info de debug */}
-                                    {process.env.NODE_ENV === 'development' && (
-                                        <Form.Text className="text-muted">
-                                            Categorías: {categories?.length || 0} disponibles
-                                            {categories?.length === 0 && !isLoadingCategories && ' - Sin datos'}
-                                        </Form.Text>
-                                    )}
                                 </Form.Group>
                             </div>
 
@@ -264,7 +314,6 @@ const CreateAssistance = ({
                                         >
                                             <option value="">Selecciona una unidad</option>
                                             {Array.isArray(saleUnits) && saleUnits.map((unit) => {
-                                                console.log('🏷️ Renderizando unidad:', unit);
                                                 return (
                                                     <option key={unit.id} value={unit.id}>
                                                         {unit.name} ({unit.short_name})
@@ -273,19 +322,52 @@ const CreateAssistance = ({
                                             })}
                                         </Form.Select>
                                     )}
-                                    {errors.sale_unit && (
-                                        <Form.Control.Feedback type="invalid">
-                                            Selecciona una unidad de venta
-                                        </Form.Control.Feedback>
-                                    )}
+                                </Form.Group>
+                            </div>
 
-                                    {/* Info de debug */}
-                                    {process.env.NODE_ENV === 'development' && (
-                                        <Form.Text className="text-muted">
-                                            Units: {saleUnits?.length || 0} disponibles
-                                            {saleUnits?.length === 0 && !isLoadingUnits && ' - Sin datos'}
-                                            {saleUnits?.length > 0 && ` | Primera: ${saleUnits[0]?.name}`}
-                                        </Form.Text>
+                            {/* NUEVO: Campo de Imagen */}
+                            <div className="col-12 mb-3">
+                                <Form.Group>
+                                    <Form.Label>Imagen del Servicio</Form.Label>
+                                    <Form.Control
+                                        id="imageInput"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="mb-2"
+                                    />
+                                    <Form.Text className="text-muted">
+                                        Formatos soportados: JPEG, PNG, GIF, WebP. Tamaño máximo: 5MB
+                                    </Form.Text>
+
+                                    {/* Vista previa de la imagen */}
+                                    {imagePreview && (
+                                        <div className="mt-3">
+                                            <div className="d-flex align-items-center gap-3">
+                                                <img
+                                                    src={imagePreview}
+                                                    alt="Vista previa"
+                                                    style={{
+                                                        width: '150px',
+                                                        height: '150px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '8px',
+                                                        border: '2px solid #dee2e6'
+                                                    }}
+                                                />
+                                                <div>
+                                                    <p className="mb-1"><strong>Archivo:</strong> {selectedImage?.name}</p>
+                                                    <p className="mb-1"><strong>Tamaño:</strong> {(selectedImage?.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                    <Button
+                                                        variant="outline-danger"
+                                                        size="sm"
+                                                        onClick={removeImage}
+                                                    >
+                                                        Quitar imagen
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </Form.Group>
                             </div>
@@ -352,7 +434,7 @@ const CreateAssistance = ({
 
                             <div className="col-md-6 mb-3">
                                 <Form.Group>
-                                    <Form.Label>Orden de impuestos</Form.Label>
+                                    <Form.Label>Porcentaje de Impuestos</Form.Label>
                                     <Form.Control
                                         type="number"
                                         step="0.01"

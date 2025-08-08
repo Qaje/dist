@@ -27,6 +27,9 @@ class AsistenceAPIController extends AppBaseController
      */
     public function index(Request $request): AsistenceCollection
     {
+        $query = Asistence::with(['saleUnit']);
+
+
         $perPage = getPageSize($request);
         $asistences = $this->asistenceRepository;
         $asistences = $asistences->paginate($perPage);
