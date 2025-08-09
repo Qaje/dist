@@ -12,6 +12,7 @@ import { fetchAllWarehouses } from "../../../store/action/warehouseAction";
 import Widget from "../../../shared/Widget/Widget";
 import SaleReturnTab from "./SaleReturnTab";
 import SalesTab from "./SalesTab";
+import SaleConsolidadoTab from "./SaleConsolidadoTab";
 import PurchaseReturnTab from "./PurchaseReturnTab";
 import ExpensesTab from "./ExpensesTab";
 import { fetchWarehouseReport } from "../../../store/action/warehouseReportAction";
@@ -19,7 +20,7 @@ import {
     faArrowLeft,
     faArrowRight,
     faCartPlus,
-    faShoppingCart,
+    faShoppingCart
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import TopProgressBar from "../../../shared/components/loaders/TopProgressBar";
@@ -37,6 +38,8 @@ const WarehouseReport = (props) => {
         value: null,
     });
     const [key, setKey] = useState("sales");
+
+    console.log(getFormattedMessage("sale-consolidated.title"));
 
     useEffect(() => {
         fetchAllWarehouses();
@@ -69,9 +72,9 @@ const WarehouseReport = (props) => {
                         defaultValue={
                             newArray[0]
                                 ? {
-                                      label: newArray[0].attributes.name,
-                                      value: newArray[0].id,
-                                  }
+                                    label: newArray[0].attributes.name,
+                                    value: newArray[0].id,
+                                }
                                 : ""
                         }
                         title={getFormattedMessage("warehouse.title")}
@@ -98,14 +101,14 @@ const WarehouseReport = (props) => {
                     value={
                         warehouseReportData?.sale_count
                             ? parseFloat(
-                                  warehouseReportData?.sale_count
-                              ).toFixed(2)
+                                warehouseReportData?.sale_count
+                            ).toFixed(2)
                             : "0.00"
                     }
                 />
 
                 <Widget
-                    title={getFormattedMessage("purchases.title")}
+                    title={getFormattedMessage("sale-consolidated.title")}
                     className="bg-success"
                     iconClass="bg-green-300"
                     icon={
@@ -118,8 +121,8 @@ const WarehouseReport = (props) => {
                     value={
                         warehouseReportData?.purchase_count
                             ? parseFloat(
-                                  warehouseReportData?.purchase_count
-                              ).toFixed(2)
+                                warehouseReportData?.purchase_count
+                            ).toFixed(2)
                             : "0.00"
                     }
                 />
@@ -138,8 +141,8 @@ const WarehouseReport = (props) => {
                     value={
                         warehouseReportData?.sale_return_count
                             ? parseFloat(
-                                  warehouseReportData?.sale_return_count
-                              ).toFixed(2)
+                                warehouseReportData?.sale_return_count
+                            ).toFixed(2)
                             : "0.00"
                     }
                 />
@@ -160,8 +163,8 @@ const WarehouseReport = (props) => {
                     value={
                         warehouseReportData?.purchase_return_count
                             ? parseFloat(
-                                  warehouseReportData?.purchase_return_count
-                              ).toFixed(2)
+                                warehouseReportData?.purchase_return_count
+                            ).toFixed(2)
                             : "0.00"
                     }
                 />
@@ -186,6 +189,23 @@ const WarehouseReport = (props) => {
                         )}
                     </div>
                 </Tab>
+
+                {/* New Sale Consolidado Tab */}
+                <Tab
+                    eventKey="sale-consolidated"
+                    title={getFormattedMessage("sale-consolidated.title")}
+                    tabClassName="position-relative mb-3 me-7"
+                >
+                    <div className="w-100 mx-auto">
+                        {key === "sale-consolidated" && (
+                            <SaleConsolidadoTab
+                                allConfigData={allConfigData}
+                                warehouseValue={warehouseValue}
+                            />
+                        )}
+                    </div>
+                </Tab>
+
                 <Tab
                     eventKey="sales-return"
                     title={getFormattedMessage("sales-return.title")}

@@ -119,6 +119,7 @@ import dualScreenReducer from "./dualScreenReducer";
 import assistanceReducer from "./assistanceReducer";
 import posAllAssistanceReducer from "./pos/posAllAssistanceReducer";
 import assistanceCategoryReducer from "./assistanceCategoryReducer";
+import consolidatedPaymentReducer from './consolidatedPaymentReducer';
 
 export default combineReducers({
     loginUser: loginReducers,
@@ -241,7 +242,7 @@ export default combineReducers({
     asistances: assistanceReducer,
     posAllAssistances: posAllAssistanceReducer,
     //assistanceCategories: assistanceCategoryReducer,
-    assistanceCategory: assistanceCategoryReducer, // ✅ AGREGAR ESTA LÍNEA
-    //asistances: asistancesReducer,
-
+    assistanceCategory: assistanceCategoryReducer,
+    //payments
+    consolidatedPayments: consolidatedPaymentReducer,
 });

@@ -37,7 +37,7 @@ use App\Http\Controllers\API\UnitAPIController;
 use App\Http\Controllers\API\UserAPIController;
 use App\Http\Controllers\API\WarehouseAPIController;
 use App\Http\Controllers\API\VariationAPIController;
-
+use App\Http\Controllers\API\ConsolidatedPaymentController;
 
 use App\Http\Controllers\MailTemplateAPIController;
 use App\Http\Controllers\PaypalPaymentController;
@@ -334,6 +334,16 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             'expense-report-excel',
             [ReportAPIController::class, 'getWarehouseExpenseReportExcel']
         )->name('report-getExpenseReportExcel');
+
+        Route::post(
+            'consolidated-payments',
+            [ConsolidatedPaymentController::class, 'store']
+        )->name('report-postSaleConsolidate');
+        Route::get(
+            'reports/consolidated-sales',
+            [ConsolidatedPaymentController::class, 'getConsolidatedSales']
+        )->name('report-getSaleConsolidate');
+
 
         //sale report
         Route::get(
