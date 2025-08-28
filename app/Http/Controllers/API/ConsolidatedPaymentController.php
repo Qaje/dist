@@ -15,6 +15,7 @@ use App\Repositories\ConsolidatedPaymentRepository;
 use App\Repositories\ConsolidatedReportRepository;
 use App\Http\Requests\ConsolidatedPaymentRequest;
 use Carbon\Carbon;
+use App\Models\Currency;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -33,12 +34,52 @@ class ConsolidatedPaymentController extends AppBaseController
     }
 
     /**
+     * Obtener la moneda del sistema desde la tabla currencies
+     */
+    private function getSystemCurrency()
+    {
+        try {
+            // Opción 1: Buscar por configuración default_currency_id
+            $defaultCurrencyId = \App\Models\Setting::where('key', 'default_currency_id')
+                ->value('value');
+
+            if ($defaultCurrencyId) {
+                $currency = Currency::find($defaultCurrencyId);
+                if ($currency) {
+                    return $currency->symbol; // Retorna ₹
+                }
+            }
+
+            // Opción 2: Buscar por código INR
+            $currency = Currency::where('code', 'INR')->first();
+            if ($currency) {
+                return $currency->symbol; // Retorna ₹
+            }
+
+            // Opción 3: Tomar la primera moneda disponible
+            $currency = Currency::orderBy('id')->first();
+            if ($currency) {
+                return $currency->symbol;
+            }
+
+            // Fallback final
+            return '₹';
+        } catch (\Exception $e) {
+            \Log::error('Error getting system currency: ' . $e->getMessage());
+            return '₹';
+        }
+    }
+
+    /**
      * Obtener ventas consolidadas por cliente
      */
     public function getConsolidatedSales(Request $request)
     {
         try {
             $warehouseId = $request->get('warehouse_id');
+
+            // Obtener la moneda del sistema
+            $systemCurrency = $this->getSystemCurrency();
 
             $query = Sale::with(['customer', 'payments'])
                 ->whereIn('payment_status', [2, 3]) // No pagado y Parcial
@@ -51,29 +92,29 @@ class ConsolidatedPaymentController extends AppBaseController
             $sales = $query->get();
 
             // Agrupar por cliente
-            $consolidatedSales = $sales->groupBy('customer_id')->map(function ($customerSales, $customerId) {
+            $consolidatedSales = $sales->groupBy('customer_id')->map(function ($customerSales, $customerId) use ($systemCurrency) {
                 $customer = $customerSales->first()->customer;
                 $totalGrandTotal = $customerSales->sum('grand_total');
                 $totalPaid = $customerSales->sum('paid_amount');
                 $totalPending = $totalGrandTotal - $totalPaid;
                 $salesCount = $customerSales->count();
 
-                // Obtener la moneda de la primera venta (asumiendo que todas las ventas del cliente tienen la misma moneda)
+                // Usar la moneda del sistema en lugar de USD
                 $firstSale = $customerSales->first();
-                $currency = $firstSale->currency ?? 'USD'; // Fallback a USD si no hay moneda
+                $currency = $firstSale->currency ?? $systemCurrency;
 
                 // Obtener detalles de cada venta
-                $salesDetails = $customerSales->map(function ($sale) {
+                $salesDetails = $customerSales->map(function ($sale) use ($systemCurrency) {
                     return [
                         'id' => $sale->id,
-                        'reference_code' => $sale->reference_code ?? $sale->reference_no ?? 'N/A', // Usar reference_code primero
+                        'reference_code' => $sale->reference_code ?? $sale->reference_no ?? 'N/A',
                         'date' => $sale->date,
                         'grand_total' => $sale->grand_total,
                         'paid_amount' => $sale->paid_amount,
                         'pending_amount' => $sale->grand_total - $sale->paid_amount,
                         'payment_status' => $sale->payment_status,
                         'created_at' => $sale->created_at,
-                        'currency' => $sale->currency ?? 'USD' // Incluir moneda por venta también
+                        'currency' => $sale->currency ?? $systemCurrency // Usar moneda del sistema
                     ];
                 })->sortBy('created_at')->values(); // Ordenar por fecha de creación (FIFO)
 
@@ -86,7 +127,7 @@ class ConsolidatedPaymentController extends AppBaseController
                     'total_paid' => $totalPaid,
                     'total_pending' => $totalPending,
                     'sales_count' => $salesCount,
-                    'currency' => $currency, // Incluir moneda a nivel de cliente
+                    'currency' => $currency, // Ahora será ₹ en lugar de USD
                     'sales_details' => $salesDetails
                 ];
             })->values();
@@ -271,7 +312,6 @@ class ConsolidatedPaymentController extends AppBaseController
             );
         }
     }
-
 
     /**
      * Obtener historial de pagos consolidados

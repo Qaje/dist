@@ -168,7 +168,7 @@ class DefaultSettingSeeder extends Seeder
             'company_name' => 'infy-pos',
             'app_name' => 'InfyPOS SaaS',
             'phone' => '+91 70963 36561',
-            'footer' => 'All rights reserved by InfyOm Technologies',
+            'footer' => 'All rights reserved by JTechnologies',
             'country' => 'India',
             'state' => 'Gujarat',
             'city' => 'Surat',

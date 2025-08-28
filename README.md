@@ -7,6 +7,28 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+Steps to install
+# Proyecto Seguro Laravel + React
+
+# Instalación
+Los comandos  a continuacion proveen la isntalacion del presente proyecto:
+1. composer install
+2. npm install
+3. cp .env.example .env
+4. php artisan key:generate
+5. php artisan migrate
+6. php artisan db:seed
+
+## Ejecución
+- Backend: `php artisan serve`
+- Frontend: `npm run dev`
+
+## Características de Seguridad
+- Autenticación con Laravel Sanctum
+- Protección CSRF
+- Validación y sanitización de datos
+- Manejo seguro de errores
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
